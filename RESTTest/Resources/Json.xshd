@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  JSON highlighting for RESTTest.
+
+  AvalonEdit ships a Json definition, but it paints punctuation Black and uses saturated
+  primaries, which disappear against the dark Fluent backdrop. These are the same mid-tone hues
+  used for the method badges, chosen to keep enough contrast on both the light and dark themes.
+-->
+<SyntaxDefinition name="RestTestJson"
+                  extensions=".json"
+                  xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+
+  <Color name="Bool" foreground="#9B59D0" exampleText="true | false" />
+  <Color name="Number" foreground="#D98A00" exampleText="3.14" />
+  <Color name="String" foreground="#3FA55A" exampleText="&quot;text&quot;" />
+  <Color name="Null" foreground="#D9534F" exampleText="null" />
+  <Color name="FieldName" foreground="#3B82D9" fontWeight="bold" exampleText="&quot;key&quot;:" />
+  <Color name="Punctuation" foreground="#8A8A8A" exampleText="{ } [ ] , :" />
+
+  <RuleSet name="String">
+    <Span begin="\\" end="." />
+  </RuleSet>
+
+  <RuleSet name="Object">
+    <Span color="FieldName" ruleSet="String">
+      <Begin>"</Begin>
+      <End>"</End>
+    </Span>
+    <Span color="FieldName" ruleSet="String">
+      <Begin>'</Begin>
+      <End>'</End>
+    </Span>
+    <Span color="Punctuation" ruleSet="Expression" multiline="true">
+      <Begin>:</Begin>
+      <End>(?= [,}] )</End>
+    </Span>
+    <Rule color="Punctuation">
+      ,
+    </Rule>
+  </RuleSet>
+
+  <RuleSet name="Array">
+    <Import ruleSet="Expression" />
+    <Rule color="Punctuation">
+      ,
+    </Rule>
+  </RuleSet>
+
+  <RuleSet name="Expression">
+    <Keywords color="Bool">
+      <Word>true</Word>
+      <Word>false</Word>
+    </Keywords>
+    <Keywords color="Null">
+      <Word>null</Word>
+    </Keywords>
+    <Span color="String" ruleSet="String">
+      <Begin>"</Begin>
+      <End>"</End>
+    </Span>
+    <Span color="String" ruleSet="String">
+      <Begin>'</Begin>
+      <End>'</End>
+    </Span>
+    <Span color="Punctuation" ruleSet="Object" multiline="true">
+      <Begin>\{</Begin>
+      <End>\}</End>
+    </Span>
+    <Span color="Punctuation" ruleSet="Array" multiline="true">
+      <Begin>\[</Begin>
+      <End>\]</End>
+    </Span>
+    <Rule color="Number">
+      -? \b
+      (?:
+        0[xX][0-9a-fA-F]+
+        |
+        (?:
+          [0-9]+ (?: \. [0-9]+ )?
+          |
+          \. [0-9]+
+        )
+        (?: [eE] [+-]? [0-9]+ )?
+      )
+    </Rule>
+  </RuleSet>
+
+  <RuleSet>
+    <Import ruleSet="Expression" />
+  </RuleSet>
+</SyntaxDefinition>

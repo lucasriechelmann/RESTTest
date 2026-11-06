@@ -1,0 +1,57 @@
+﻿<Application x:Class="RESTTest.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:RESTTest.Converters"
+             xmlns:ctrl="clr-namespace:RESTTest.Controls"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!-- No StartupUri: App.OnStartup is the composition root and builds the window itself. -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Theme is switched to match Windows at startup; this is just the design-time default. -->
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+            </ResourceDictionary.MergedDictionaries>
+
+            <conv:MethodBrushConverter x:Key="MethodBrush" />
+            <conv:StatusBrushConverter x:Key="StatusBrush" />
+            <conv:AuthKindLabelConverter x:Key="AuthKindLabel" />
+            <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+            <conv:StringNotEmptyToVisibilityConverter x:Key="StringToVis" />
+            <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+            <!-- Monospace stack for JSON editors: Cascadia ships with Windows 11, Consolas is the fallback. -->
+            <FontFamily x:Key="CodeFont">Cascadia Mono, Consolas, Courier New</FontFamily>
+
+            <Style x:Key="CodeEditorStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="FontFamily" Value="{StaticResource CodeFont}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="AcceptsReturn" Value="True" />
+                <Setter Property="AcceptsTab" Value="True" />
+                <Setter Property="TextWrapping" Value="NoWrap" />
+                <Setter Property="VerticalContentAlignment" Value="Top" />
+                <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+                <Setter Property="SpellCheck.IsEnabled" Value="False" />
+            </Style>
+
+            <!-- AvalonEdit does no theming of its own, so the chrome is driven from theme brushes. -->
+            <Style x:Key="JsonEditorStyle" TargetType="{x:Type ctrl:JsonEditor}">
+                <Setter Property="FontFamily" Value="{StaticResource CodeFont}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="LineNumbersForeground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="6,4" />
+            </Style>
+
+            <Style x:Key="SectionLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Opacity" Value="0.75" />
+                <Setter Property="Margin" Value="0,0,0,6" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

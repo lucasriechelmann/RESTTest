@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RESTTest/RESTTest.csproj" />
+  <Project Path="RESTTest.Tests/RESTTest.Tests.csproj" />
+</Solution>

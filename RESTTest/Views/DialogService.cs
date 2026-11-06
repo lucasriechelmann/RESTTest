@@ -1,0 +1,52 @@
+﻿using System.Windows;
+using RESTTest.Services;
+using RESTTest.ViewModels;
+
+namespace RESTTest.Views;
+
+/// <summary>
+/// View-layer implementation of <see cref="IDialogService"/>. Lives here, next to the windows it
+/// opens, so that nothing in the ViewModel layer ever references a <see cref="Window"/>.
+/// </summary>
+public sealed class DialogService : IDialogService
+{
+    /// <summary>Set once by the composition root; used to centre dialogs and keep them modal.</summary>
+    public Window? Owner { get; set; }
+
+    public bool Confirm(string title, string message, string acceptText = "OK")
+    {
+        var dialog = new MessageDialog(title, message, acceptText, showCancel: true) { Owner = Owner };
+        return dialog.ShowDialog() == true;
+    }
+
+    public string? Prompt(string title, string label, string initialValue = "", string placeholder = "")
+    {
+        var dialog = new PromptDialog(title, label, initialValue, placeholder) { Owner = Owner };
+        return dialog.ShowDialog() == true ? dialog.Value : null;
+    }
+
+    public void ShowMessage(string title, string message)
+    {
+        var dialog = new MessageDialog(title, message, "OK", showCancel: false) { Owner = Owner };
+        dialog.ShowDialog();
+    }
+
+    public void ShowEnvironments(CollectionViewModel collection)
+    {
+        var dialog = new EnvironmentsDialog(collection) { Owner = Owner };
+        dialog.ShowDialog();
+    }
+
+    public void CopyToClipboard(string text)
+    {
+        try
+        {
+            Clipboard.SetText(text);
+        }
+        catch (Exception)
+        {
+            // The clipboard is a shared OS resource and can be locked by another process;
+            // a failed copy is not worth interrupting the user over.
+        }
+    }
+}

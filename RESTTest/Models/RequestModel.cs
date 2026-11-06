@@ -1,0 +1,23 @@
+namespace RESTTest.Models;
+
+/// <summary>
+/// Persisted form of a request. Only the method and the path are stored here: the host comes
+/// from whichever environment the owning collection currently has selected.
+/// </summary>
+public sealed class RequestModel
+{
+    public string Method { get; set; } = "GET";
+
+    /// <summary>Appended to the active environment's base URL, e.g. "/api/users/1".</summary>
+    public string Path { get; set; } = string.Empty;
+
+    public string Body { get; set; } = string.Empty;
+
+    public AuthKind Auth { get; set; } = AuthKind.None;
+
+    public string BearerToken { get; set; } = string.Empty;
+
+    public List<KeyValueModel> QueryParams { get; set; } = [];
+
+    public List<KeyValueModel> Headers { get; set; } = [];
+}

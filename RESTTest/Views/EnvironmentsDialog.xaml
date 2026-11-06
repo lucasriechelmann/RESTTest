@@ -1,0 +1,104 @@
+﻿<ui:FluentWindow x:Class="RESTTest.Views.EnvironmentsDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:vm="clr-namespace:RESTTest.ViewModels"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 mc:Ignorable="d"
+                 d:DataContext="{d:DesignInstance Type=vm:CollectionViewModel}"
+                 Title="Collection URLs"
+                 Width="640"
+                 Height="460"
+                 MinWidth="520"
+                 MinHeight="320"
+                 ShowInTaskbar="False"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Collection URLs" ShowMaximize="False" ShowMinimize="False" />
+
+        <ui:InfoBar Grid.Row="1"
+                    Margin="20,4,20,12"
+                    IsOpen="True"
+                    IsClosable="False"
+                    Severity="Informational"
+                    Title="Shared by every request"
+                    Message="These base URLs belong to the collection. Pick one in the toolbar and every request in the collection points at it, so the same request can be run against any environment." />
+
+        <!-- Column headers, kept outside the list so they do not scroll away. -->
+        <Grid Grid.Row="2" Margin="20,0,20,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Name" FontWeight="SemiBold" Opacity="0.75" />
+            <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="Base URL" FontWeight="SemiBold" Opacity="0.75" />
+            <TextBlock Grid.Column="2" Width="36" Text="" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="3" Margin="20,0,20,0" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Environments}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:TextBox Grid.Column="0"
+                                        PlaceholderText="Local"
+                                        Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <ui:TextBox Grid.Column="1"
+                                        Margin="8,0,0,0"
+                                        FontFamily="{StaticResource CodeFont}"
+                                        PlaceholderText="http://localhost:5000"
+                                        Text="{Binding BaseUrl, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <ui:Button Grid.Column="2"
+                                       Margin="8,0,0,0"
+                                       Padding="8"
+                                       Command="{Binding DataContext.RemoveEnvironmentCommand,
+                                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                       CommandParameter="{Binding}"
+                                       ToolTip="Remove this URL">
+                                <ui:SymbolIcon Symbol="Delete24" />
+                            </ui:Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Grid Grid.Row="4" Margin="20,12,20,20">
+            <ui:Button HorizontalAlignment="Left"
+                       Command="{Binding AddEnvironmentCommand}"
+                       Content="Add URL">
+                <ui:Button.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </ui:Button.Icon>
+            </ui:Button>
+
+            <ui:Button MinWidth="92"
+                       HorizontalAlignment="Right"
+                       Appearance="Primary"
+                       Content="Done"
+                       IsDefault="True"
+                       Click="OnDone" />
+        </Grid>
+    </Grid>
+</ui:FluentWindow>
