@@ -188,6 +188,9 @@ public sealed class HttpRequestSender : IHttpRequestSender
         }
     }
 
+    /// <summary>Whether a request with this method has its body sent at all.</summary>
+    public static bool CarriesBody(string method) => BodyCapableMethods.Contains(method);
+
     private static void ApplyBody(HttpRequestMessage message, RequestModel request, string method)
     {
         message.Content = BuildContent(request, method);

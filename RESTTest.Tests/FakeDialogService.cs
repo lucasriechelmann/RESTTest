@@ -17,7 +17,7 @@ internal sealed class FakeDialogService : IDialogService
         return ConfirmResult;
     }
 
-    public string? Prompt(string title, string label, string initialValue = "", string placeholder = "") => null;
+    public string? Prompt(string title, string label, string initialValue = "", string placeholder = "", bool multiline = false) => null;
 
     public void ShowMessage(string title, string message)
     {

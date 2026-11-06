@@ -10,8 +10,11 @@ public interface IDialogService
     /// <summary>Returns true when the user accepts. Used for destructive actions.</summary>
     bool Confirm(string title, string message, string acceptText = "OK");
 
-    /// <summary>Single-line text prompt. Returns null when cancelled.</summary>
-    string? Prompt(string title, string label, string initialValue = "", string placeholder = "");
+    /// <summary>
+    /// Text prompt. Returns null when cancelled. <paramref name="multiline"/> gives a larger box
+    /// that accepts newlines, for pasting something like a cURL command.
+    /// </summary>
+    string? Prompt(string title, string label, string initialValue = "", string placeholder = "", bool multiline = false);
 
     void ShowMessage(string title, string message);
 

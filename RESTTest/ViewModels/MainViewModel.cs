@@ -493,6 +493,90 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     [RelayCommand]
     private void ShowHistory() => _dialogs.ShowHistory(History);
 
+    /// <summary>Puts the open request on the clipboard as a cURL command, with the host it would be sent to.</summary>
+    [RelayCommand]
+    private void CopyAsCurl()
+    {
+        if (ActiveRequest is not { } request)
+        {
+            return;
+        }
+
+        var model = request.ToModel();
+        var url = _sender.BuildUrl(SelectedCollection?.ActiveBaseUrl, model);
+
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            StatusMessage = "There is no URL to copy yet. Add a base URL to the collection, or type a path.";
+            return;
+        }
+
+        _dialogs.CopyToClipboard(CurlExporter.Build(url, model));
+        StatusMessage = "cURL command copied.";
+    }
+
+    /// <summary>
+    /// Asks for a pasted cURL command and adds it to the open collection as a new request. A command
+    /// that cannot be read is explained and the text is offered again, so a typo does not cost the paste.
+    /// </summary>
+    [RelayCommand]
+    private void ImportCurl()
+    {
+        if (SelectedCollection is not { } collection)
+        {
+            StatusMessage = "Create or select a collection first.";
+            return;
+        }
+
+        var pasted = string.Empty;
+
+        while (true)
+        {
+            pasted = _dialogs.Prompt(
+                "Import cURL",
+                "Paste a cURL command. Browsers offer one under Network > Copy > Copy as cURL (bash).",
+                pasted,
+                "curl https://api.example.com/users -H 'Accept: application/json'",
+                multiline: true) ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(pasted))
+            {
+                return;
+            }
+
+            if (!CurlParser.TryParse(pasted, collection.ActiveBaseUrl, out var import, out var error))
+            {
+                _dialogs.ShowMessage("Could not import", error ?? "The command could not be read.");
+                continue;
+            }
+
+            var node = NodeViewModel.FromModel(new NodeModel
+            {
+                Kind = NodeKind.Request,
+                Name = import!.SuggestedName,
+                Request = import.Request,
+            });
+
+            collection.GetInsertTarget(SelectedNode).Add(node);
+            SelectedNode = node;
+            StatusMessage = $"Imported \"{import.SuggestedName}\".";
+
+            var notes = new List<string>(import.Warnings);
+            if (import.KeptAbsoluteUrl)
+            {
+                notes.Add("The host is not the collection's active base URL, so the full URL was kept in the path. " +
+                          "Add that host under Manage URLs and shorten the path to re-target it later.");
+            }
+
+            if (notes.Count > 0)
+            {
+                _dialogs.ShowMessage("Imported with notes", string.Join(Environment.NewLine + Environment.NewLine, notes));
+            }
+
+            return;
+        }
+    }
+
     /// <summary>
     /// Fills a multipart file row from the file picker. Here and not on the row because opening a
     /// dialog is this layer's job (<see cref="IDialogService"/>); a row only holds its own state.

@@ -19,9 +19,9 @@ public sealed class DialogService : IDialogService
         return dialog.ShowDialog() == true;
     }
 
-    public string? Prompt(string title, string label, string initialValue = "", string placeholder = "")
+    public string? Prompt(string title, string label, string initialValue = "", string placeholder = "", bool multiline = false)
     {
-        var dialog = new PromptDialog(title, label, initialValue, placeholder) { Owner = Owner };
+        var dialog = new PromptDialog(title, label, initialValue, placeholder, multiline) { Owner = Owner };
         return dialog.ShowDialog() == true ? dialog.Value : null;
     }
 

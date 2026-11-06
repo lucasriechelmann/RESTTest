@@ -57,6 +57,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0"
@@ -130,6 +131,16 @@
                            ToolTip="Request history (Ctrl+H)">
                     <ui:Button.Icon>
                         <ui:SymbolIcon Symbol="History24" />
+                    </ui:Button.Icon>
+                </ui:Button>
+
+                <ui:Button Grid.Column="10"
+                           Margin="6,0,0,0"
+                           Command="{Binding ImportCurlCommand}"
+                           Content="Import cURL"
+                           ToolTip="Add a request from a pasted cURL command">
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon Symbol="ArrowDownload24" />
                     </ui:Button.Icon>
                 </ui:Button>
             </Grid>
@@ -206,6 +217,8 @@
                                 <MenuItem Command="{Binding NewFolderCommand}" Header="New Folder" />
                                 <Separator />
                                 <MenuItem Command="{Binding RunSelectedCommand}" Header="Run" />
+                                <MenuItem Command="{Binding ImportCurlCommand}" Header="Import cURL..." />
+                                <MenuItem Command="{Binding CopyAsCurlCommand}" Header="Copy as cURL" />
                                 <Separator />
                                 <MenuItem Command="{Binding RenameSelectedCommand}" Header="Rename" InputGestureText="F2" />
                                 <MenuItem Command="{Binding DuplicateSelectedCommand}" Header="Duplicate" />
@@ -370,6 +383,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0"
@@ -387,6 +401,14 @@
                                    ToolTip="Copy the resolved URL">
                             <ui:SymbolIcon FontSize="14" Symbol="Copy24" />
                         </ui:Button>
+
+                        <ui:Button Grid.Column="2"
+                                   Margin="4,0,0,0"
+                                   Padding="8,2"
+                                   Command="{Binding CopyAsCurlCommand}"
+                                   Content="cURL"
+                                   FontSize="12"
+                                   ToolTip="Copy this request as a cURL command" />
                     </Grid>
 
                     <!-- Request detail tabs: everything inside is scoped to the request -->
