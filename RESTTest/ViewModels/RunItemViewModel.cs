@@ -74,9 +74,7 @@ public partial class RunItemViewModel : ObservableObject
 
     public void Apply(HttpExchangeResult result, IReadOnlyList<AssertionResult> tests)
     {
-        ElapsedText = result.ElapsedMilliseconds < 1000
-            ? $"{result.ElapsedMilliseconds} ms"
-            : $"{result.ElapsedMilliseconds / 1000.0:0.00} s";
+        ElapsedText = DisplayFormat.Duration(result.ElapsedMilliseconds);
 
         StatusText = result.Completed
             ? $"{result.StatusCode} {result.ReasonPhrase}".Trim()

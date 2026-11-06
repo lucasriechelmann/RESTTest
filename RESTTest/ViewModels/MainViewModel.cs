@@ -17,6 +17,16 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     private readonly ICollectionStore _store;
     private readonly IHttpRequestSender _sender;
     private readonly IDialogService _dialogs;
+    private readonly IHistoryStore _historyStore;
+
+    /// <summary>Set when the history changed since the last write; flushed by <see cref="_saveTimer"/>.</summary>
+    private bool _historyDirty;
+
+    /// <summary>
+    /// True once the user pressed Cancel for the send in flight. Such a send is not history: the
+    /// user abandoned it. A timeout cancels the same token, so the token alone cannot tell them apart.
+    /// </summary>
+    private bool _cancelledByUser;
 
     /// <summary>Collections edited since the last write. Flushed by <see cref="_saveTimer"/>.</summary>
     private readonly HashSet<CollectionViewModel> _pendingSaves = [];
@@ -43,11 +53,20 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     [ObservableProperty]
     private string? _statusMessage;
 
-    public MainViewModel(ICollectionStore store, IHttpRequestSender sender, IDialogService dialogs)
+    public MainViewModel(
+        ICollectionStore store,
+        IHttpRequestSender sender,
+        IDialogService dialogs,
+        IHistoryStore historyStore)
     {
         _store = store;
         _sender = sender;
         _dialogs = dialogs;
+        _historyStore = historyStore;
+
+        History = new HistoryViewModel(dialogs, historyStore.Load());
+        History.Changed += (_, _) => QueueHistorySave();
+        History.SaveAsRequestHandler = SaveHistoryEntryAsRequest;
 
         // Coalesces a burst of keystrokes into one write.
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
@@ -59,6 +78,8 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     public ObservableCollection<CollectionViewModel> Collections { get; } = [];
 
     public ResponseViewModel Response { get; } = new();
+
+    public HistoryViewModel History { get; }
 
     /// <summary>The request being edited, or null when a folder (or nothing) is selected.</summary>
     public RequestViewModel? ActiveRequest => SelectedNode?.Request;
@@ -151,9 +172,32 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         FlushPendingSaves();
     }
 
+    private void QueueHistorySave()
+    {
+        _historyDirty = true;
+
+        // Same debounce as the collections: one write for a burst of changes.
+        _saveTimer.Stop();
+        _saveTimer.Start();
+    }
+
     /// <summary>Writes anything still queued. Called by the timer and on window close.</summary>
     public void FlushPendingSaves()
     {
+        if (_historyDirty)
+        {
+            _historyDirty = false;
+
+            try
+            {
+                _historyStore.Save(History.ToModels());
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Could not save the history: {ex.Message}";
+            }
+        }
+
         if (_pendingSaves.Count == 0)
         {
             return;
@@ -412,6 +456,7 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         }
 
         IsSending = true;
+        _cancelledByUser = false;
         StatusMessage = null;
 
         _sendCancellation?.Dispose();
@@ -424,7 +469,13 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
                 .SendAsync(collection.ActiveBaseUrl, model, _sendCancellation.Token)
                 .ConfigureAwait(true);
 
-            Response.Load(result, AssertionEvaluator.EvaluateAll(model.Assertions, result));
+            var tests = AssertionEvaluator.EvaluateAll(model.Assertions, result);
+            Response.Load(result, tests);
+
+            if (!_cancelledByUser)
+            {
+                History.Record(collection.Name, model, result, tests);
+            }
         }
         finally
         {
@@ -433,7 +484,42 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     }
 
     [RelayCommand]
-    private void CancelSend() => _sendCancellation?.Cancel();
+    private void CancelSend()
+    {
+        _cancelledByUser = true;
+        _sendCancellation?.Cancel();
+    }
+
+    [RelayCommand]
+    private void ShowHistory() => _dialogs.ShowHistory(History);
+
+    /// <summary>
+    /// Copies a history entry's request into the open collection, next to the selection. Returns
+    /// the message the history dialog shows.
+    /// </summary>
+    private string? SaveHistoryEntryAsRequest(HistoryEntryViewModel entry)
+    {
+        if (SelectedCollection is not { } collection)
+        {
+            return "Create or select a collection first.";
+        }
+
+        var path = entry.Path.Trim();
+        var name = path.Length == 0 ? entry.Method : $"{entry.Method} {path}";
+
+        // A blank id makes FromModel mint a fresh one, so this never collides with the original.
+        var node = NodeViewModel.FromModel(new NodeModel
+        {
+            Kind = NodeKind.Request,
+            Name = name,
+            Request = entry.Request,
+        });
+
+        collection.GetInsertTarget(SelectedNode).Add(node);
+        SelectedNode = node;
+
+        return $"Saved \"{name}\" to {collection.Name}.";
+    }
 
     /// <summary>
     /// Runs every request in the selected folder, or in the whole collection when a request (or

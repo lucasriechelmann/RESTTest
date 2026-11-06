@@ -37,6 +37,12 @@ public sealed class DialogService : IDialogService
         dialog.ShowDialog();
     }
 
+    public void ShowHistory(HistoryViewModel history)
+    {
+        var dialog = new HistoryDialog(history) { Owner = Owner };
+        dialog.ShowDialog();
+    }
+
     public void ShowRunner(RunnerViewModel runner)
     {
         var dialog = new RunnerDialog(runner) { Owner = Owner };

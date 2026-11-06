@@ -23,6 +23,7 @@
         <KeyBinding Key="Return" Modifiers="Ctrl" Command="{Binding SendCommand}" />
         <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewRequestCommand}" />
         <KeyBinding Key="N" Modifiers="Ctrl+Shift" Command="{Binding NewFolderCommand}" />
+        <KeyBinding Key="H" Modifiers="Ctrl" Command="{Binding ShowHistoryCommand}" />
     </ui:FluentWindow.InputBindings>
 
     <Grid>
@@ -54,6 +55,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
@@ -118,6 +120,16 @@
                            Content="Manage URLs">
                     <ui:Button.Icon>
                         <ui:SymbolIcon Symbol="Link24" />
+                    </ui:Button.Icon>
+                </ui:Button>
+
+                <ui:Button Grid.Column="9"
+                           Margin="6,0,0,0"
+                           Command="{Binding ShowHistoryCommand}"
+                           Content="History"
+                           ToolTip="Request history (Ctrl+H)">
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon Symbol="History24" />
                     </ui:Button.Icon>
                 </ui:Button>
             </Grid>

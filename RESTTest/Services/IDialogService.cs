@@ -27,6 +27,9 @@ public interface IDialogService
     /// </summary>
     void ShowRunner(RunnerViewModel runner);
 
+    /// <summary>Opens the request history. Blocks until the dialog is closed.</summary>
+    void ShowHistory(HistoryViewModel history);
+
     /// <summary>Puts text on the clipboard, swallowing the transient failures the clipboard throws.</summary>
     void CopyToClipboard(string text);
 }

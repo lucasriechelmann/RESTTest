@@ -35,6 +35,12 @@ Run button (and context menu) runs every request in the selected folder, or the 
 - Owner: `ViewModels/RunnerViewModel.cs`, `RunItemViewModel.cs` (each holds a `RequestModel` snapshot taken at start); started from `MainViewModel.RunSelected`.
 - View: `Views/RunnerDialog.xaml`, opened through `IDialogService.ShowRunner`.
 
+## Request history
+Every Send is recorded (not user-cancelled ones, not collection runs): the request as sent, the resolved URL, status, timing, size, headers, the response body and the test result. The History button (top bar, Ctrl+H) opens a dialog: entries newest first on the left; on the right the response, headers and request body. "Save as request" copies the stored request into the open collection next to the selection; Delete and Clear all (confirmed) remove entries. Global across collections, capped at 100 entries, response bodies cut at 100,000 characters (flagged in the dialog).
+- Owner: `ViewModels/HistoryViewModel.cs` (list, record, commands), `HistoryEntryViewModel.cs` (read-only row); recording, saving and "Save as request" are wired in `MainViewModel`.
+- Persistence: `Models/HistoryEntryModel.cs`, `Services/HistoryStore.cs` (`history.json` in the workspace).
+- View: `Views/HistoryDialog.xaml`, opened through `IDialogService.ShowHistory`.
+
 ## Persistence and session restore
 Auto-save (600 ms debounce) of collections as JSON, flush on close, and restoring the last collection and selected request. First run seeds a "Sample API" collection.
 - Owner: `ViewModels/EditableViewModel.cs` (dirty bubbling), `MainViewModel` (Loading and saving region), `Services/CollectionStore.cs`, `Models/AppSettings.cs`.
@@ -44,7 +50,7 @@ Ctrl+F find panel in the JSON editors with amber match highlighting. The panel k
 - Owner: `Controls/JsonEditor.cs`.
 
 ## Not built (do not assume these exist)
-Request history, import from Postman/Insomnia, variables beyond the base URL, saving responses to disk, non-JSON body types (form, multipart, XML), response diffing, auth types beyond bearer, cookies.
+Import from Postman/Insomnia, variables beyond the base URL, saving responses to disk, non-JSON body types (form, multipart, XML), response diffing, auth types beyond bearer, cookies.
 
 <!-- manual:start -->
 <!-- manual:end -->

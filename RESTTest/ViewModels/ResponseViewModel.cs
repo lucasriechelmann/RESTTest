@@ -55,19 +55,12 @@ public partial class ResponseViewModel : ObservableObject
         : string.Empty;
 
     /// <summary>Drives the status pill colour: 2xx green, 3xx blue, 4xx amber, 5xx red.</summary>
-    public string StatusCategory => StatusCode switch
-    {
-        >= 200 and < 300 => "Success",
-        >= 300 and < 400 => "Redirect",
-        >= 400 and < 500 => "ClientError",
-        >= 500 => "ServerError",
-        _ => "Unknown",
-    };
+    public string StatusCategory => DisplayFormat.StatusCategory(StatusCode);
 
     public void Load(HttpExchangeResult result, IReadOnlyList<AssertionResult>? tests = null)
     {
         RequestUrl = result.Url;
-        ElapsedText = FormatDuration(result.ElapsedMilliseconds);
+        ElapsedText = DisplayFormat.Duration(result.ElapsedMilliseconds);
         Headers.Clear();
         LoadTests(tests);
 
@@ -86,7 +79,7 @@ public partial class ResponseViewModel : ObservableObject
         Error = null;
         StatusCode = result.StatusCode;
         StatusText = $"{result.StatusCode} {result.ReasonPhrase}".Trim();
-        SizeText = FormatSize(result.ContentLength);
+        SizeText = DisplayFormat.Size(result.ContentLength);
         RawBody = result.Body;
         PrettyBody = JsonText.PrettyOrOriginal(result.Body);
 
@@ -126,16 +119,6 @@ public partial class ResponseViewModel : ObservableObject
         OnPropertyChanged(nameof(AllTestsPassed));
         OnPropertyChanged(nameof(TestSummary));
     }
-
-    private static string FormatDuration(long milliseconds) =>
-        milliseconds < 1000 ? $"{milliseconds} ms" : $"{milliseconds / 1000.0:0.00} s";
-
-    private static string FormatSize(long bytes) => bytes switch
-    {
-        < 1024 => $"{bytes} B",
-        < 1024 * 1024 => $"{bytes / 1024.0:0.0} KB",
-        _ => $"{bytes / (1024.0 * 1024.0):0.00} MB",
-    };
 
     partial void OnStatusCodeChanged(int value) => OnPropertyChanged(nameof(StatusCategory));
 

@@ -22,8 +22,9 @@ public partial class App : Application
         var store = new CollectionStore();
         var sender = new HttpRequestSender();
         var dialogs = new DialogService();
+        var historyStore = new HistoryStore(store.WorkspacePath);
 
-        var viewModel = new MainViewModel(store, sender, dialogs);
+        var viewModel = new MainViewModel(store, sender, dialogs, historyStore);
         var window = new MainWindow(viewModel);
 
         dialogs.Owner = window;

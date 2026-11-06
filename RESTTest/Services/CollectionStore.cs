@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using RESTTest.Models;
 
 namespace RESTTest.Services;
@@ -11,19 +10,7 @@ namespace RESTTest.Services;
 /// </summary>
 public sealed class CollectionStore : ICollectionStore
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true,
-        // Enums as names ("GET", "BearerToken") rather than opaque integers.
-        Converters = { new JsonStringEnumConverter() },
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-        // The default encoder escapes quotes as ", which makes an embedded JSON body
-        // unreadable. These files are local and never served as HTML, so relaxed escaping is safe.
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
+    private static JsonSerializerOptions SerializerOptions => JsonFile.Options;
 
     private readonly string _collectionsPath;
     private readonly string _settingsFile;
@@ -136,24 +123,7 @@ public sealed class CollectionStore : ICollectionStore
         return Path.Combine(_collectionsPath, safeId + ".json");
     }
 
-    /// <summary>
-    /// Writes via a temp file and a replace, so a crash mid-save cannot leave a truncated
-    /// collection behind. Auto-save runs often, which makes that a realistic failure.
-    /// </summary>
-    private static void WriteAtomic(string path, string contents)
-    {
-        var temp = path + ".tmp";
-        File.WriteAllText(temp, contents);
-
-        if (File.Exists(path))
-        {
-            File.Replace(temp, path, destinationBackupFileName: null);
-        }
-        else
-        {
-            File.Move(temp, path);
-        }
-    }
+    private static void WriteAtomic(string path, string contents) => JsonFile.WriteAtomic(path, contents);
 
     private static void EnsureIds(CollectionModel collection)
     {

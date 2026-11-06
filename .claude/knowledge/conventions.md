@@ -16,7 +16,7 @@ Each pattern names one real file as the reference example.
 
 ## Dialogs and UI services
 
-- ViewModels call `IDialogService` (`Confirm`, `Prompt`, `ShowMessage`, `ShowEnvironments`, `ShowRunner`, `CopyToClipboard`). `ShowRunner` takes an already-started `RunnerViewModel` and cancels it when the dialog closes. The implementation in `Views/DialogService.cs` is the only place windows are constructed. Destructive actions confirm first (`MainViewModel.DeleteSelected`).
+- ViewModels call `IDialogService` (`Confirm`, `Prompt`, `ShowMessage`, `ShowEnvironments`, `ShowRunner`, `ShowHistory`, `CopyToClipboard`). `ShowRunner` takes an already-started `RunnerViewModel` and cancels it when the dialog closes. When a dialog's ViewModel needs something only `MainViewModel` can do (e.g. history's "Save as request"), pass a callback property (`HistoryViewModel.SaveAsRequestHandler`) instead of a reference to the other ViewModel. The implementation in `Views/DialogService.cs` is the only place windows are constructed. Destructive actions confirm first (`MainViewModel.DeleteSelected`).
 - The environments dialog binds straight to the live `CollectionViewModel`: no apply/cancel state, auto-save picks up edits as typed. Reference: `Views/EnvironmentsDialog.xaml.cs`.
 
 ## Views, behaviors, controls
@@ -37,8 +37,8 @@ Each pattern names one real file as the reference example.
 
 ## Data access
 
-- All disk access goes through `ICollectionStore`; all HTTP through `IHttpRequestSender`. Both are interfaces so ViewModels can be tested with fakes (store tests use the real store against a temp path, see Tests).
-- Writes use temp file + replace (`CollectionStore.WriteAtomic`). Files are keyed on collection id, not name.
+- All HTTP goes through `IHttpRequestSender`, all disk access through `ICollectionStore` and `IHistoryStore`. They are interfaces so ViewModels can be tested with fakes (store tests use the real store against a temp path, see Tests). Both stores use `JsonFile.Options` and `JsonFile.WriteAtomic`, so add any new workspace file the same way rather than re-declaring serializer settings. Collection files are keyed on collection id, not name.
+- Response facts shown as text (duration, size, status colour category) come from `Services/DisplayFormat.cs`; do not add another private formatter in a ViewModel.
 
 ## Naming and style
 
@@ -53,7 +53,7 @@ None. There is no logging framework. User-visible problems go to `StatusMessage`
 
 ## Tests
 
-xUnit in `RESTTest.Tests/`, flat folder, one class per concern (`TreeMoveTests`, `DirtyTrackingTests`, `CollectionStoreTests`, `UrlBuildingTests`, `JsonTextTests`, `NodeViewModelTests`, `BracketMatchingTests`, `AssertionEvaluatorTests`, `JsonPathLiteTests`, `AssertionViewModelTests`, `RunnerViewModelTests`). Runner tests use a hand-written `FakeSender : IHttpRequestSender` defined inside the test class. `CollectionStoreTests` uses a temp-directory workspace and is `IDisposable`. Tests cover Models, ViewModels and Services only; the UI is verified by hand (see CLAUDE.md).
+xUnit in `RESTTest.Tests/`, flat folder, one class per concern (`TreeMoveTests`, `DirtyTrackingTests`, `CollectionStoreTests`, `UrlBuildingTests`, `JsonTextTests`, `NodeViewModelTests`, `BracketMatchingTests`, `AssertionEvaluatorTests`, `JsonPathLiteTests`, `AssertionViewModelTests`, `RunnerViewModelTests`, `HistoryViewModelTests`, `HistoryStoreTests`, `DisplayFormatTests`). Runner tests use a hand-written `FakeSender : IHttpRequestSender` defined inside the test class; ViewModel tests that need dialogs share `FakeDialogService` (set `ConfirmResult`, read `ConfirmMessages`). `MainViewModel` itself is not unit tested (it owns a `DispatcherTimer`), so keep logic in the smaller ViewModels it composes. `CollectionStoreTests` uses a temp-directory workspace and is `IDisposable`. Tests cover Models, ViewModels and Services only; the UI is verified by hand (see CLAUDE.md).
 
 ## Competing patterns
 
