@@ -52,6 +52,24 @@ public partial class ResponseViewModel : ObservableObject
     [ObservableProperty]
     private string _saveNote = string.Empty;
 
+    /// <summary>
+    /// A JSONPath typed above the Preview ("$.items[*].id"). While it is valid the Preview shows only
+    /// what it selects. Kept across re-sends of the same request, cleared when another request is selected.
+    /// </summary>
+    [ObservableProperty]
+    private string _filterText = string.Empty;
+
+    /// <summary>What the Preview shows: the pretty body, or just the part <see cref="FilterText"/> selects.</summary>
+    [ObservableProperty]
+    private string _displayBody = string.Empty;
+
+    /// <summary>"3 matches", "No matches", or why the path could not be used.</summary>
+    [ObservableProperty]
+    private string _filterStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _filterHasError;
+
     /// <summary>Show every line in the Diff tab instead of just the changes and their surroundings.</summary>
     [ObservableProperty]
     private bool _showAllLines;
@@ -86,6 +104,40 @@ public partial class ResponseViewModel : ObservableObject
 
     /// <summary>The lines shown in the Diff tab (changes with context, or everything).</summary>
     public ObservableCollection<DiffLine> DiffLines { get; } = [];
+
+    /// <summary>The filter box only makes sense for a received, textual response.</summary>
+    public bool CanFilter => HasResponse && !HasError && !IsBinary;
+
+    partial void OnFilterTextChanged(string value) => RefreshDisplay();
+
+    /// <summary>Recomputes <see cref="DisplayBody"/> and the filter note from the body and the filter text.</summary>
+    private void RefreshDisplay()
+    {
+        OnPropertyChanged(nameof(CanFilter));
+
+        if (!CanFilter || string.IsNullOrWhiteSpace(FilterText))
+        {
+            DisplayBody = PrettyBody;
+            FilterStatus = string.Empty;
+            FilterHasError = false;
+            return;
+        }
+
+        var result = JsonPathQuery.Run(RawBody, FilterText);
+
+        if (!result.Ok)
+        {
+            // Half-typed paths are normal while typing: keep the whole body in view and say what is wrong.
+            DisplayBody = PrettyBody;
+            FilterStatus = result.Error ?? string.Empty;
+            FilterHasError = true;
+            return;
+        }
+
+        FilterHasError = false;
+        FilterStatus = result.Summary;
+        DisplayBody = result.Matches.Count == 0 ? string.Empty : JsonText.PrettyOrOriginal(result.ToDisplayJson());
+    }
 
     public bool HasBaseline => _baseline is not null;
 
@@ -226,6 +278,7 @@ public partial class ResponseViewModel : ObservableObject
             _current = null;
             SetBaseline(null);
             RaiseSaveChanged();
+            RefreshDisplay();
             return;
         }
 
@@ -257,6 +310,7 @@ public partial class ResponseViewModel : ObservableObject
 
         HasResponse = true;
         RaiseSaveChanged();
+        RefreshDisplay();
 
         _current = result;
         SetBaseline(baseline);
@@ -320,6 +374,10 @@ public partial class ResponseViewModel : ObservableObject
         RaiseSaveChanged();
         _current = null;
         SetBaseline(null);
+
+        // A filter belongs to the request it was typed for: another request starts unfiltered.
+        FilterText = string.Empty;
+        RefreshDisplay();
     }
 
     private void LoadTests(IReadOnlyList<AssertionResult>? tests)

@@ -806,7 +806,8 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
 
         if (Response.HasResponse)
         {
-            _dialogs.CopyToClipboard(Response.PrettyBody);
+            // What the Preview shows: the whole body, or just what an active filter selects.
+            _dialogs.CopyToClipboard(Response.DisplayBody);
             StatusMessage = "Response copied.";
         }
     }

@@ -1164,13 +1164,58 @@
                             <TabControl Grid.Row="1" Visibility="{Binding HasResponse, Converter={StaticResource BoolToVis}}">
                                 <TabItem Header="Preview">
                                     <Grid>
-                                        <ctrl:JsonEditor Margin="0,8,0,0"
-                                                         BoundText="{Binding PrettyBody, Mode=OneWay}"
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Narrows the Preview to what a JSONPath selects. Hidden for errors and binary bodies. -->
+                                        <ui:TextBox Grid.Row="0"
+                                                    Margin="0,8,0,0"
+                                                    AutomationProperties.Name="Filter the response with a JSONPath"
+                                                    ClearButtonEnabled="True"
+                                                    FontFamily="{StaticResource CodeFont}"
+                                                    PlaceholderText="Filter with JSONPath, e.g. $.items[*].id   $..name   $.items[?(@.price &gt; 10)]"
+                                                    ToolTip="JSONPath: $.a.b  [0]  [*]  ..name  [1:3]  [?(@.price &gt; 10 &amp;&amp; @.name =~ 'ada')]"
+                                                    Visibility="{Binding CanFilter, Converter={StaticResource BoolToVis}}">
+                                            <ui:TextBox.Text>
+                                                <Binding Path="FilterText"
+                                                         Delay="250"
+                                                         Mode="TwoWay"
+                                                         UpdateSourceTrigger="PropertyChanged" />
+                                            </ui:TextBox.Text>
+                                        </ui:TextBox>
+
+                                        <TextBlock Grid.Row="1"
+                                                   Margin="2,4,0,0"
+                                                   FontSize="12"
+                                                   Text="{Binding FilterStatus}"
+                                                   TextWrapping="Wrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding FilterStatus}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FilterHasError}" Value="True">
+                                                            <Setter Property="Foreground" Value="#D9534F" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <ctrl:JsonEditor Grid.Row="2"
+                                                         Margin="0,8,0,0"
+                                                         BoundText="{Binding DisplayBody, Mode=OneWay}"
                                                          IsReadOnly="True"
                                                          Style="{StaticResource JsonEditorStyle}"
                                                          Visibility="{Binding IsBinary, Converter={StaticResource InverseBoolToVis}}" />
 
-                                        <TextBlock Margin="0,16,0,0"
+                                        <TextBlock Grid.Row="2"
+                                                   Margin="0,16,0,0"
                                                    HorizontalAlignment="Left"
                                                    VerticalAlignment="Top"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
