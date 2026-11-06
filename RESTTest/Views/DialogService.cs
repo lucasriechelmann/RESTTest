@@ -59,6 +59,12 @@ public sealed class DialogService : IDialogService
         return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
     }
 
+    public void ShowCookies(CookiesViewModel cookies)
+    {
+        var dialog = new CookiesDialog(cookies) { Owner = Owner };
+        dialog.ShowDialog();
+    }
+
     public void ShowHistory(HistoryViewModel history)
     {
         var dialog = new HistoryDialog(history) { Owner = Owner };

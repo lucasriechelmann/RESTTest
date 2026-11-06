@@ -65,6 +65,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0"
@@ -146,6 +147,15 @@
                 </ui:Button>
 
                 <ui:Button Grid.Column="10"
+                           Margin="4,0,0,0"
+                           Padding="8"
+                           AutomationProperties.Name="Cookies"
+                           Command="{Binding ShowCookiesCommand}"
+                           ToolTip="Cookies kept between requests">
+                    <ui:SymbolIcon Symbol="Cookies24" />
+                </ui:Button>
+
+                <ui:Button Grid.Column="11"
                            Margin="4,0,0,0"
                            Padding="8"
                            AutomationProperties.Name="Import cURL"

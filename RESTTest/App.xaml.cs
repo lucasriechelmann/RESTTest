@@ -20,11 +20,15 @@ public partial class App : Application
         ApplicationThemeManager.ApplySystemTheme();
 
         var store = new CollectionStore();
-        var sender = new HttpRequestSender();
+        var cookieStore = new CookieStore(store.WorkspacePath);
+        var cookieJar = new CookieJar();
+        cookieJar.Load(cookieStore.Load());
+
+        var sender = new HttpRequestSender(cookieJar);
         var dialogs = new DialogService();
         var historyStore = new HistoryStore(store.WorkspacePath);
 
-        var viewModel = new MainViewModel(store, sender, dialogs, historyStore);
+        var viewModel = new MainViewModel(store, sender, dialogs, historyStore, cookieJar, cookieStore);
         var window = new MainWindow(viewModel);
 
         dialogs.Owner = window;

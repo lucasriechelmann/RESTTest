@@ -20,6 +20,11 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     private readonly IHttpRequestSender _sender;
     private readonly IDialogService _dialogs;
     private readonly IHistoryStore _historyStore;
+    private readonly CookieJar _cookieJar;
+    private readonly ICookieStore _cookieStore;
+
+    /// <summary>Set when the cookie jar changed since the last write; flushed by <see cref="_saveTimer"/>.</summary>
+    private bool _cookiesDirty;
 
     /// <summary>Set when the history changed since the last write; flushed by <see cref="_saveTimer"/>.</summary>
     private bool _historyDirty;
@@ -59,15 +64,23 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         ICollectionStore store,
         IHttpRequestSender sender,
         IDialogService dialogs,
-        IHistoryStore historyStore)
+        IHistoryStore historyStore,
+        CookieJar cookieJar,
+        ICookieStore cookieStore)
     {
         _store = store;
         _sender = sender;
         _dialogs = dialogs;
         _historyStore = historyStore;
+        _cookieJar = cookieJar;
+        _cookieStore = cookieStore;
+
+        // Cookies are saved the same debounced way as history. The jar only raises Changed when
+        // something really changed, so an ordinary request does not rewrite the file.
+        _cookieJar.Changed += (_, _) => QueueCookieSave();
 
         Response = new ResponseViewModel(dialogs);
-        History =new HistoryViewModel(dialogs, historyStore.Load());
+        History = new HistoryViewModel(dialogs, historyStore.Load());
         History.Changed += (_, _) => QueueHistorySave();
         History.SaveAsRequestHandler = SaveHistoryEntryAsRequest;
 
@@ -184,9 +197,30 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         _saveTimer.Start();
     }
 
+    private void QueueCookieSave()
+    {
+        _cookiesDirty = true;
+        _saveTimer.Stop();
+        _saveTimer.Start();
+    }
+
     /// <summary>Writes anything still queued. Called by the timer and on window close.</summary>
     public void FlushPendingSaves()
     {
+        if (_cookiesDirty)
+        {
+            _cookiesDirty = false;
+
+            try
+            {
+                _cookieStore.Save(_cookieJar.ToModel());
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Could not save the cookies: {ex.Message}";
+            }
+        }
+
         if (_historyDirty)
         {
             _historyDirty = false;
@@ -496,6 +530,9 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     [RelayCommand]
     private void ShowHistory() => _dialogs.ShowHistory(History);
 
+    [RelayCommand]
+    private void ShowCookies() => _dialogs.ShowCookies(new CookiesViewModel(_cookieJar, _dialogs));
+
     /// <summary>Puts the open request on the clipboard as a cURL command, with the host it would be sent to.</summary>
     [RelayCommand]
     private void CopyAsCurl()
@@ -514,7 +551,12 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
             return;
         }
 
-        _dialogs.CopyToClipboard(CurlExporter.Build(url, model));
+        // The jar adds a Cookie header on send, so the copied command carries the same cookies.
+        var cookies = _cookieJar.Enabled && Uri.TryCreate(url, UriKind.Absolute, out var target)
+            ? _cookieJar.HeaderFor(target)
+            : null;
+
+        _dialogs.CopyToClipboard(CurlExporter.Build(url, model, cookies));
         StatusMessage = "cURL command copied.";
     }
 

@@ -39,6 +39,10 @@ internal sealed class FakeDialogService : IDialogService
         return SavePathResult;
     }
 
+    public void ShowCookies(CookiesViewModel cookies)
+    {
+    }
+
     public void ShowEnvironments(CollectionViewModel collection)
     {
     }

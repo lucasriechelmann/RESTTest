@@ -25,16 +25,35 @@ public sealed class HttpRequestSender : IHttpRequestSender
         "POST", "PUT", "PATCH", "DELETE",
     };
 
-    // A single client for the process lifetime: a client per request exhausts sockets.
-    private static readonly HttpClient Client = CreateClient();
+    // Single clients for the process lifetime: a client per request exhausts sockets. One has no
+    // cookie handling at all (jar switched off, or the request types its own Cookie header, so the
+    // headers sent are exactly the ones shown); the other reads and writes the cookie jar.
+    private static readonly HttpClient Client = CreateClient(null);
 
-    private static HttpClient CreateClient()
+    private readonly HttpClient _jarClient;
+
+    public HttpRequestSender()
+        : this(new CookieJar())
+    {
+    }
+
+    public HttpRequestSender(CookieJar jar)
+    {
+        Jar = jar;
+        _jarClient = CreateClient(jar.Container);
+    }
+
+    /// <summary>The cookies kept between requests. Shared with the Cookies dialog.</summary>
+    public CookieJar Jar { get; }
+
+    private static HttpClient CreateClient(CookieContainer? cookies)
     {
         var handler = new SocketsHttpHandler
         {
             AllowAutoRedirect = true,
-            // Cookies off: an API tester should send exactly the headers shown in the UI.
-            UseCookies = false,
+            // The handler (not this class) applies cookies, so those set on a redirect response survive.
+            UseCookies = cookies is not null,
+            CookieContainer = cookies ?? new CookieContainer(),
             AutomaticDecompression = DecompressionMethods.All,
             SslOptions = new SslClientAuthenticationOptions
             {
@@ -153,9 +172,17 @@ public sealed class HttpRequestSender : IHttpRequestSender
             ApplyAuthentication(message, request);
             ApplyHeaders(message, request);
 
-            using var response = await Client
+            // A typed Cookie header means "send exactly this": the jar stays out of that request.
+            var useJar = Jar.Enabled && !(request.Headers ?? []).Any(h => h.Enabled && h.Key.Trim().Equals("Cookie", StringComparison.OrdinalIgnoreCase));
+
+            using var response = await (useJar ? _jarClient : Client)
                 .SendAsync(message, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .ConfigureAwait(false);
+
+            if (useJar)
+            {
+                Jar.NotifyMaybeChanged();
+            }
 
             var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
             stopwatch.Stop();
@@ -371,6 +398,13 @@ public sealed class HttpRequestSender : IHttpRequestSender
 
         foreach (var header in response.Headers)
         {
+            if (header.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase))
+            {
+                // One row per cookie: joining them with ", " is unreadable (an Expires date has a comma too).
+                headers.AddRange(header.Value.Select(v => new KeyValueModel { Key = header.Key, Value = v }));
+                continue;
+            }
+
             headers.Add(new KeyValueModel { Key = header.Key, Value = string.Join(", ", header.Value) });
         }
 

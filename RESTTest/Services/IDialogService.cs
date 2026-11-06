@@ -42,6 +42,9 @@ public interface IDialogService
     /// </summary>
     string? PickSavePath(string title, string suggestedName, string? filter = null);
 
+    /// <summary>Opens the cookie jar. Blocks until the dialog is closed.</summary>
+    void ShowCookies(CookiesViewModel cookies);
+
     /// <summary>Opens the request history. Blocks until the dialog is closed.</summary>
     void ShowHistory(HistoryViewModel history);
 

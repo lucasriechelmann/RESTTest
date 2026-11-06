@@ -50,6 +50,16 @@ The **Import** button in the sidebar toolbar (or the tree context menu, "Import 
 - **What does not, and is reported.** Scripts, OAuth/other auth, binary file bodies, cookie parameters, path parameters like `{id}` (left in the path), and `{{placeholders}}` with no value in the file (left as typed). A notes dialog lists each loss once.
 - Owners: `Services/Importing/` (`CollectionImporter` detects the format; `PostmanImporter`, `InsomniaImporter`, `OpenApiImporter`; shared `BaseUrlGrouper`, `PlaceholderResolver`), `MainViewModel.ImportCollection`.
 
+## Cookie jar
+Cookies a server sets are kept and sent back on later requests to that host, like a browser: log in once, then call the protected endpoints. The **Cookies** button (cookie icon, top bar) opens the jar: a switch ("Keep cookies and send them on later requests"), a table of every cookie (host, name, value, path, expiry, flags), a delete button per row and "Clear all" (confirms first). Switched off, nothing is stored or sent and requests go out exactly as typed.
+- **Typed Cookie header wins.** A request with its own enabled `Cookie` header skips the jar entirely, so the headers sent are the headers shown.
+- **Redirects.** Cookies set on a redirect response (the usual shape of a login) are kept and sent to the redirect target.
+- **One jar for the whole app,** keyed by host and path as in a browser, so two collections calling the same host share cookies; cookies ignore the port (`localhost:5000` and `localhost:5001` share).
+- **Persisted** to `cookies.json` in the workspace, session cookies included (unlike a browser) so a login survives a restart; expired ones are dropped on load. Secrets are plain text, as for tokens.
+- **Copy as cURL** adds `-b 'a=1; b=2'` with the cookies the jar would send (not when a Cookie header is typed). Importing a `-b` command gives a normal `Cookie` header.
+- The response Headers tab lists each `Set-Cookie` as its own row.
+- Owners: `Services/CookieJar.cs`, `CookieStore.cs`/`ICookieStore.cs`, `HttpRequestSender` (jar client), `ViewModels/CookiesViewModel.cs`, `Views/CookiesDialog.xaml`, `Models/CookieModel.cs` + `CookieJarModel.cs`.
+
 ## Binary responses and saving a response
 A response body is read as raw bytes. `ResponseBody` decides text or binary: a known text type (text/*, JSON, XML, JavaScript, HTML, CSV...) is text; a known binary type (image, audio, video, font, PDF, zip, octet-stream, vnd.*) is binary; an unknown or missing type is sniffed (a NUL byte or invalid UTF-8 means binary). Text is decoded with the declared charset (a byte-order mark wins). A binary body is not shown as text: the Preview tab shows a notice with its size and type, and Copy explains there is nothing to copy.
 The **Save** button (disk icon, left of Copy, in the response header) writes the body to a file **byte for byte** via the save dialog. The proposed name is the server's `Content-Disposition` filename (including RFC 5987 `filename*`, with any directory part and illegal characters removed), else the last URL segment, else `response` plus an extension from the content type (`.bin` for unknown binary, `.txt` for unknown text). A note under the status row says where it was saved; a failed write is explained in a dialog. Nothing can be saved for an error, an empty body or no response.
@@ -73,7 +83,7 @@ Ctrl+F find panel in the JSON editors with amber match highlighting. The panel k
 - Owner: `Controls/JsonEditor.cs`.
 
 ## Not built (do not assume these exist)
-YAML import, Postman environment files, variables beyond the base URL, binary request bodies (sending a file as the whole body), a GraphQL editor, XML syntax colouring, response diffing, OAuth and other auth types beyond bearer, Basic and API key, cookies.
+YAML import, Postman environment files, adding a cookie by hand, variables beyond the base URL, binary request bodies (sending a file as the whole body), a GraphQL editor, XML syntax colouring, response diffing, OAuth and other auth types beyond bearer, Basic and API key.
 
 <!-- manual:start -->
 <!-- manual:end -->

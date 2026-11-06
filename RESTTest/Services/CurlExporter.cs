@@ -17,7 +17,11 @@ namespace RESTTest.Services;
 public static class CurlExporter
 {
     /// <param name="url">The full URL to call, including the query string (see <c>IHttpRequestSender.BuildUrl</c>).</param>
-    public static string Build(string url, RequestModel request)
+    /// <param name="cookies">
+    /// The <c>Cookie</c> header value the cookie jar would add to this request (see <c>CookieJar.HeaderFor</c>),
+    /// or null. Ignored when the request has its own Cookie header, which replaces the jar's.
+    /// </param>
+    public static string Build(string url, RequestModel request, string? cookies = null)
     {
         var method = string.IsNullOrWhiteSpace(request.Method) ? "GET" : request.Method.Trim().ToUpperInvariant();
 
@@ -34,6 +38,14 @@ public static class CurlExporter
         foreach (var header in Headers(request, method))
         {
             parts.Add($"-H {Quote($"{header.Key}: {header.Value}")}");
+        }
+
+        var typedCookie = (request.Headers ?? []).Any(h =>
+            h.Enabled && h.Key.Trim().Equals("Cookie", StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(cookies) && !typedCookie)
+        {
+            parts.Add($"-b {Quote(cookies)}");
         }
 
         if (UsesBasicFlag(request))
