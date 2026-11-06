@@ -119,25 +119,35 @@
                                     </TextBlock.Style>
                                 </TextBlock>
 
-                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                                <!--
+                                    Method, then name and path as ONE trimmed line. As separate TextBlocks in a
+                                    StackPanel they never shrink, and a long path ran underneath the status text.
+                                -->
+                                <Grid Grid.Row="0"
+                                      Grid.Column="1"
+                                      Margin="0,0,12,0"
+                                      ToolTip="{Binding Path}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
                                     <TextBlock MinWidth="46"
                                                VerticalAlignment="Center"
                                                FontSize="11"
                                                FontWeight="Bold"
                                                Foreground="{Binding Method, Converter={StaticResource MethodBrush}}"
                                                Text="{Binding Method}" />
-                                    <TextBlock VerticalAlignment="Center"
-                                               FontWeight="SemiBold"
-                                               Text="{Binding Name}"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Margin="10,0,0,0"
+
+                                    <TextBlock Grid.Column="1"
                                                VerticalAlignment="Center"
-                                               FontFamily="{StaticResource CodeFont}"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Text="{Binding Path}"
-                                               TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run FontWeight="SemiBold" Text="{Binding Name, Mode=OneWay}" /><Run Text="   " /><Run FontFamily="{StaticResource CodeFont}"
+                                             FontSize="12"
+                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                             Text="{Binding Path, Mode=OneWay}" />
+                                    </TextBlock>
+                                </Grid>
 
                                 <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
                                     <TextBlock VerticalAlignment="Center"

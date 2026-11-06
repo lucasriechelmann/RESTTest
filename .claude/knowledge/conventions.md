@@ -25,6 +25,15 @@ Each pattern names one real file as the reference example.
 - **Attached behaviors** (static classes with attached DependencyProperties, a private `Controller`/hook state property to avoid leaks) carry WPF-only concerns: `Behaviors/TreeViewDragDrop.cs` (hit-testing, drop adorner, hover-to-expand; requires the row element named `NodeRow`), `TreeViewSelection.cs` (bindable `SelectedItem`, select on right-click), `FocusBehavior.cs` (focus on visible, commit on lost focus).
 - **`Controls/JsonEditor.cs`** wraps AvalonEdit with a bindable `BoundText`, re-entrancy guard, caret preservation, bracket highlighting and a search panel. Use it for any JSON/code display. Set `HighlightJson="False"` to show plain text, XML or form lines without JSON colouring (the Body tab's Text/XML editor and history's non-JSON request bodies do). Style via `JsonEditorStyle` in `App.xaml`.
 - **Converters** live in `Converters/`, are registered in `App.xaml` resources with short keys (`BoolToVis`, `InverseBoolToVis`, `MethodBrush`, `StatusBrush`, `AuthKindLabel`, `AssertionLabel`). Prefer exposing a plain bool/instance property on the ViewModel over chaining converters.
+- **Layout rules** (from a layout audit; every item below was a real clipped or hidden control):
+  - The window's minimum is 1040 x 640 DIP. Check every view at that size, not only at the default.
+  - Never set a fixed `Width` on a WPF-UI `CheckBox`: its template needs about 42 DIP and a smaller width clips the box to a sliver. Give the grid column a fixed 44 and let the box size itself.
+  - In a table of rows, every column must be fixed or star-sized and identical in the header grid and the row grid. An `Auto` column is measured per row, so fields drift from row to row and stop lining up with their headers.
+  - A horizontal `StackPanel` never shrinks or trims its children, so long text overflows or runs under its neighbour. Use a `Grid` or `DockPanel` with a star column (and `TextTrimming`), or a single `TextBlock` with several `Run`s to trim "name + path" as one line. Use a `WrapPanel` for toolbars and meta rows so the last item wraps instead of clipping.
+  - Text a user must read to fix a problem (an error message, a path) wraps; do not trim it.
+  - Toolbar actions beside a flexible control are icon-only with `ToolTip` and `AutomationProperties.Name`; flexible combo boxes get a `MinWidth` so they cannot collapse to a bare chevron.
+  - Give an `ItemsControl` inside a `ScrollViewer` a right margin, or the scrollbar sits on its last column.
+  - Judge layout from a physical-pixel capture of the window. UI Automation reports a control's assigned size, not what is drawn inside it, and does not show clipping.
 - **Theme.** WPF-UI controls with `DynamicResource` theme brushes so light and dark both work; `ApplySystemTheme()` at startup.
 - Pure, testable helpers are kept as static classes outside the controls: `Services/JsonText.cs` (format/minify/validate), `Services/JsonBracketMatcher.cs`.
 

@@ -26,10 +26,9 @@ public partial class PromptDialog
             MinHeight = 320;
 
             ValueBox.AcceptsReturn = true;
-            ValueBox.TextWrapping = TextWrapping.NoWrap;
+            ValueBox.TextWrapping = TextWrapping.Wrap;
             ValueBox.VerticalContentAlignment = VerticalAlignment.Top;
             ValueBox.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
-            ValueBox.HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
             ValueBox.Height = 240;
         }
 

@@ -108,8 +108,8 @@
                                     </Border>
 
                                     <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock MinWidth="44"
+                                        <DockPanel LastChildFill="True">
+                                            <TextBlock MinWidth="44" DockPanel.Dock="Left"
                                                        FontSize="11"
                                                        FontWeight="Bold"
                                                        Foreground="{Binding Method, Converter={StaticResource MethodBrush}}"
@@ -118,7 +118,7 @@
                                                        FontSize="12"
                                                        Text="{Binding Path}"
                                                        TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
+                                            </DockPanel>
                                         <TextBlock FontSize="11"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                    TextTrimming="CharacterEllipsis">
@@ -151,24 +151,30 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal">
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
                         <TextBlock Margin="0,0,10,0"
                                    VerticalAlignment="Center"
                                    FontSize="14"
                                    FontWeight="Bold"
                                    Foreground="{Binding Method, Converter={StaticResource MethodBrush}}"
                                    Text="{Binding Method}" />
-                        <TextBox VerticalAlignment="Center"
+                        <TextBox Grid.Column="1"
+                                 VerticalAlignment="Center"
+                                 TextWrapping="Wrap"
                                  Background="Transparent"
                                  BorderThickness="0"
                                  FontFamily="{StaticResource CodeFont}"
                                  IsReadOnly="True"
                                  Text="{Binding Url, Mode=OneWay}" />
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel Grid.Row="1"
-                                Margin="0,8,0,10"
-                                Orientation="Horizontal">
+                    <WrapPanel Grid.Row="1"
+                                Margin="0,8,0,10">
                         <Border Padding="8,2"
                                 Background="{Binding StatusCategory, Converter={StaticResource StatusBrush}}"
                                 CornerRadius="4">
@@ -209,7 +215,7 @@
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                             <Run Text="Sent " /><Run Text="{Binding WhenText, Mode=OneWay}" /><Run Text=" from " /><Run Text="{Binding CollectionName, Mode=OneWay}" />
                         </TextBlock>
-                    </StackPanel>
+                    </WrapPanel>
 
                     <TabControl Grid.Row="2">
                         <TabItem Header="Response">

@@ -12,8 +12,8 @@
                  Title="RESTTest"
                  Width="1320"
                  Height="860"
-                 MinWidth="920"
-                 MinHeight="620"
+                 MinWidth="1040"
+                 MinHeight="640"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round"
@@ -41,6 +41,12 @@
         </ui:TitleBar>
 
         <!-- ================= Collection and environment bar ================= -->
+        <!--
+            Both combo boxes are star-sized with a minimum, so at the smallest window width neither
+            collapses to a bare chevron. The three actions on the right are icon-only (with tooltips
+            and automation names) to leave the room: text buttons there used to push the Base URL
+            combo down to nothing.
+        -->
         <Border Grid.Row="1"
                 Padding="12,2,12,10"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
@@ -48,13 +54,13 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="230" />
+                    <ColumnDefinition Width="1.2*" MinWidth="150" MaxWidth="300" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="2*" MinWidth="200" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -69,11 +75,13 @@
                 <ComboBox Grid.Column="1"
                           DisplayMemberPath="Name"
                           ItemsSource="{Binding Collections}"
-                          SelectedItem="{Binding SelectedCollection, Mode=TwoWay}" />
+                          SelectedItem="{Binding SelectedCollection, Mode=TwoWay}"
+                          ToolTip="{Binding SelectedCollection.Name}" />
 
                 <ui:Button Grid.Column="2"
                            Margin="6,0,0,0"
                            Padding="8"
+                           AutomationProperties.Name="New collection"
                            Command="{Binding NewCollectionCommand}"
                            ToolTip="New collection">
                     <ui:SymbolIcon Symbol="Add24" />
@@ -82,6 +90,7 @@
                 <ui:Button Grid.Column="3"
                            Margin="4,0,0,0"
                            Padding="8"
+                           AutomationProperties.Name="Rename collection"
                            Command="{Binding RenameCollectionCommand}"
                            ToolTip="Rename collection">
                     <ui:SymbolIcon Symbol="Rename24" />
@@ -90,6 +99,7 @@
                 <ui:Button Grid.Column="4"
                            Margin="4,0,0,0"
                            Padding="8"
+                           AutomationProperties.Name="Delete collection"
                            Command="{Binding DeleteCollectionCommand}"
                            ToolTip="Delete collection">
                     <ui:SymbolIcon Symbol="Delete24" />
@@ -113,35 +123,34 @@
                 <ComboBox Grid.Column="7"
                           DisplayMemberPath="Display"
                           ItemsSource="{Binding SelectedCollection.Environments}"
-                          SelectedItem="{Binding SelectedCollection.ActiveEnvironment, Mode=TwoWay}" />
+                          SelectedItem="{Binding SelectedCollection.ActiveEnvironment, Mode=TwoWay}"
+                          ToolTip="{Binding SelectedCollection.ActiveEnvironment.Display}" />
 
                 <ui:Button Grid.Column="8"
                            Margin="6,0,0,0"
+                           Padding="8"
+                           AutomationProperties.Name="Manage base URLs"
                            Command="{Binding ManageEnvironmentsCommand}"
-                           Content="Manage URLs">
-                    <ui:Button.Icon>
-                        <ui:SymbolIcon Symbol="Link24" />
-                    </ui:Button.Icon>
+                           ToolTip="Manage base URLs">
+                    <ui:SymbolIcon Symbol="Link24" />
                 </ui:Button>
 
                 <ui:Button Grid.Column="9"
-                           Margin="6,0,0,0"
+                           Margin="4,0,0,0"
+                           Padding="8"
+                           AutomationProperties.Name="Request history"
                            Command="{Binding ShowHistoryCommand}"
-                           Content="History"
                            ToolTip="Request history (Ctrl+H)">
-                    <ui:Button.Icon>
-                        <ui:SymbolIcon Symbol="History24" />
-                    </ui:Button.Icon>
+                    <ui:SymbolIcon Symbol="History24" />
                 </ui:Button>
 
                 <ui:Button Grid.Column="10"
-                           Margin="6,0,0,0"
+                           Margin="4,0,0,0"
+                           Padding="8"
+                           AutomationProperties.Name="Import cURL"
                            Command="{Binding ImportCurlCommand}"
-                           Content="Import cURL"
-                           ToolTip="Add a request from a pasted cURL command">
-                    <ui:Button.Icon>
-                        <ui:SymbolIcon Symbol="ArrowDownload24" />
-                    </ui:Button.Icon>
+                           ToolTip="Import a request from a cURL command">
+                    <ui:SymbolIcon Symbol="ArrowDownload24" />
                 </ui:Button>
             </Grid>
         </Border>
@@ -163,10 +172,10 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0"
-                                Margin="10,10,10,6"
-                                Orientation="Horizontal">
-                        <ui:Button Command="{Binding NewRequestCommand}"
+                    <!-- A WrapPanel: a narrow sidebar moves the last button to a second line instead of clipping it. -->
+                    <WrapPanel Grid.Row="0" Margin="10,10,4,4">
+                        <ui:Button Margin="0,0,6,6"
+                                   Command="{Binding NewRequestCommand}"
                                    Content="Request"
                                    ToolTip="New request (Ctrl+N)">
                             <ui:Button.Icon>
@@ -174,7 +183,7 @@
                             </ui:Button.Icon>
                         </ui:Button>
 
-                        <ui:Button Margin="6,0,0,0"
+                        <ui:Button Margin="0,0,6,6"
                                    Command="{Binding NewFolderCommand}"
                                    Content="Folder"
                                    ToolTip="New folder (Ctrl+Shift+N)">
@@ -183,7 +192,7 @@
                             </ui:Button.Icon>
                         </ui:Button>
 
-                        <ui:Button Margin="6,0,0,0"
+                        <ui:Button Margin="0,0,6,6"
                                    Command="{Binding RunSelectedCommand}"
                                    Content="Run"
                                    ToolTip="Run every request in the selected folder, or in the whole collection, and check their tests">
@@ -191,7 +200,7 @@
                                 <ui:SymbolIcon Symbol="Play24" />
                             </ui:Button.Icon>
                         </ui:Button>
-                    </StackPanel>
+                    </WrapPanel>
 
                     <TreeView Grid.Row="1"
                               Padding="4,0,4,8"
@@ -249,6 +258,7 @@
                                     before/inside/after calculation.
                                 -->
                                 <Border x:Name="NodeRow"
+                                        ToolTip="{Binding Name}"
                                         MinHeight="28"
                                         Padding="2,3"
                                         Background="Transparent">
@@ -328,9 +338,9 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" MinHeight="170" />
+                        <RowDefinition Height="*" MinHeight="230" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" MinHeight="170" />
+                        <RowDefinition Height="*" MinHeight="140" />
                     </Grid.RowDefinitions>
 
                     <!-- Method, path, send -->
@@ -424,9 +434,7 @@
                                 </Grid.RowDefinitions>
 
                                 <!-- Body type, then the actions and notes that apply to it. -->
-                                <StackPanel Grid.Row="0"
-                                            Margin="0,0,0,8"
-                                            Orientation="Horizontal">
+                                <WrapPanel Grid.Row="0" Margin="0,0,0,2">
                                     <ComboBox Width="190"
                                               ItemsSource="{Binding BodyOptions}"
                                               SelectedItem="{Binding BodyMode, Mode=TwoWay}"
@@ -474,7 +482,7 @@
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                Text="This method does not send a body."
                                                Visibility="{Binding SupportsBody, Converter={StaticResource InverseBoolToVis}}" />
-                                </StackPanel>
+                                </WrapPanel>
 
                                 <Grid Grid.Row="1">
                                     <!-- JSON, and Text / XML: same text, two editors that differ only in colouring. -->
@@ -497,31 +505,30 @@
 
                                         <Grid Grid.Row="0" Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="44" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="1.4*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Width="30" Text="" />
+                                            <TextBlock Grid.Column="0" Text="" />
                                             <TextBlock Grid.Column="1" Style="{StaticResource SectionLabelStyle}" Text="Field" />
                                             <TextBlock Grid.Column="2" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Value" />
                                             <TextBlock Grid.Column="3" Width="40" Text="" />
                                         </Grid>
 
                                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                            <ItemsControl ItemsSource="{Binding FormFields}">
+                                            <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding FormFields}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Margin="0,0,0,6">
                                                             <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="44" />
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="1.4*" />
                                                                 <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
 
                                                             <CheckBox Grid.Column="0"
-                                                                      Width="30"
                                                                       VerticalAlignment="Center"
                                                                       IsChecked="{Binding Enabled, Mode=TwoWay}"
                                                                       ToolTip="Send this field" />
@@ -573,34 +580,33 @@
 
                                         <Grid Grid.Row="0" Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="44" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="78" />
                                                 <ColumnDefinition Width="1.6*" />
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="132" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Width="30" Text="" />
+                                            <TextBlock Grid.Column="0" Text="" />
                                             <TextBlock Grid.Column="1" Style="{StaticResource SectionLabelStyle}" Text="Field" />
-                                            <TextBlock Grid.Column="2" Width="70" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Type" />
+                                            <TextBlock Grid.Column="2" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Type" />
                                             <TextBlock Grid.Column="3" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Value or file path" />
-                                            <TextBlock Grid.Column="4" Width="130" Text="" />
+                                            <TextBlock Grid.Column="4" Text="" />
                                         </Grid>
 
                                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                            <ItemsControl ItemsSource="{Binding MultipartParts}">
+                                            <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding MultipartParts}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Margin="0,0,0,6">
                                                             <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="44" />
                                                                 <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="78" />
                                                                 <ColumnDefinition Width="1.6*" />
-                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="132" />
                                                             </Grid.ColumnDefinitions>
 
                                                             <CheckBox Grid.Column="0"
-                                                                      Width="30"
                                                                       VerticalAlignment="Center"
                                                                       IsChecked="{Binding Enabled, Mode=TwoWay}"
                                                                       ToolTip="Send this part" />
@@ -624,7 +630,7 @@
                                                                         PlaceholderText="value"
                                                                         Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                                                            <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                                            <StackPanel Grid.Column="4" HorizontalAlignment="Right" Orientation="Horizontal">
                                                                 <ui:Button Margin="8,0,0,0"
                                                                            Command="{Binding DataContext.PickMultipartFileCommand,
                                                                                               RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
@@ -712,31 +718,30 @@
 
                                 <Grid Grid.Row="0" Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="44" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="1.4*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Width="30" Text="" />
+                                    <TextBlock Grid.Column="0" Text="" />
                                     <TextBlock Grid.Column="1" Style="{StaticResource SectionLabelStyle}" Text="Key" />
                                     <TextBlock Grid.Column="2" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Value" />
                                     <TextBlock Grid.Column="3" Width="40" Text="" />
                                 </Grid>
 
                                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding QueryParams}">
+                                    <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding QueryParams}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Margin="0,0,0,6">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="44" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="1.4*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
 
                                                     <CheckBox Grid.Column="0"
-                                                              Width="30"
                                                               VerticalAlignment="Center"
                                                               IsChecked="{Binding Enabled, Mode=TwoWay}"
                                                               ToolTip="Include this parameter" />
@@ -796,31 +801,30 @@
 
                                 <Grid Grid.Row="0" Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="44" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="1.4*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Width="30" Text="" />
+                                    <TextBlock Grid.Column="0" Text="" />
                                     <TextBlock Grid.Column="1" Style="{StaticResource SectionLabelStyle}" Text="Header" />
                                     <TextBlock Grid.Column="2" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Value" />
                                     <TextBlock Grid.Column="3" Width="40" Text="" />
                                 </Grid>
 
                                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding Headers}">
+                                    <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding Headers}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Margin="0,0,0,6">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="44" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="1.4*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
 
                                                     <CheckBox Grid.Column="0"
-                                                              Width="30"
                                                               VerticalAlignment="Center"
                                                               IsChecked="{Binding Enabled, Mode=TwoWay}"
                                                               ToolTip="Send this header" />
@@ -885,21 +889,20 @@
                                            Text="Checked after every Send and every Run. Unticked rows are skipped." />
 
                                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding Assertions}">
+                                    <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding Assertions}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Margin="0,0,0,6">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="44" />
                                                         <ColumnDefinition Width="170" />
                                                         <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="150" />
+                                                        <ColumnDefinition Width="140" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
 
                                                     <CheckBox Grid.Column="0"
-                                                              Width="30"
                                                               VerticalAlignment="Center"
                                                               IsChecked="{Binding Enabled, Mode=TwoWay}"
                                                               ToolTip="Run this check" />
@@ -916,7 +919,7 @@
 
                                                     <!-- Header name or JSON path; collapses (and takes its gap with it) for other targets. -->
                                                     <ui:TextBox Grid.Column="2"
-                                                                Width="170"
+                                                                Width="120"
                                                                 Margin="8,0,0,0"
                                                                 FontFamily="{StaticResource CodeFont}"
                                                                 PlaceholderText="{Binding SelectorPlaceholder}"
@@ -992,7 +995,7 @@
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
-                                <StackPanel Orientation="Horizontal"
+                                <WrapPanel Margin="0,0,40,0"
                                             Visibility="{Binding HasResponse, Converter={StaticResource BoolToVis}}">
                                     <Border Padding="8,2"
                                             Background="{Binding StatusCategory, Converter={StaticResource StatusBrush}}"
@@ -1034,9 +1037,9 @@
                                                VerticalAlignment="Center"
                                                Foreground="#D9534F"
                                                Text="{Binding Error}"
-                                               TextTrimming="CharacterEllipsis"
+                                               TextWrapping="Wrap"
                                                Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
-                                </StackPanel>
+                                </WrapPanel>
 
                                 <ui:Button HorizontalAlignment="Right"
                                            Padding="6,2"
@@ -1071,7 +1074,7 @@
                                 </TabItem>
                                 <TabItem Header="Headers">
                                     <ScrollViewer Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl ItemsSource="{Binding Headers}">
+                                        <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding Headers}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Margin="0,0,0,4">
