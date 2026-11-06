@@ -401,6 +401,8 @@ public static class CurlParser
         private bool _getMode;
         private AuthKind _auth = AuthKind.None;
         private string _bearerToken = string.Empty;
+        private string _basicUsername = string.Empty;
+        private string _basicPassword = string.Empty;
         private bool _json;
 
         /// <summary>
@@ -707,9 +709,10 @@ public static class CurlParser
                 credentials += ":";
             }
 
-            // Sent as a plain header: the app has no basic-auth type, and this is what it puts on the wire.
-            var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(credentials));
-            _headers.Add(new KeyValueModel { Key = "Authorization", Value = $"Basic {encoded}" });
+            var colon = credentials.IndexOf(':');
+            _auth = AuthKind.Basic;
+            _basicUsername = credentials[..colon];
+            _basicPassword = credentials[(colon + 1)..];
         }
 
         private void AddFormPart(string raw, bool literal)
@@ -851,15 +854,31 @@ public static class CurlParser
         {
             request.Auth = _auth;
             request.BearerToken = _bearerToken;
+            request.BasicUsername = _basicUsername;
+            request.BasicPassword = _basicPassword;
 
             foreach (var header in _headers)
             {
+                var isAuthorization = header.Key.Equals("Authorization", StringComparison.OrdinalIgnoreCase);
+
                 if (request.Auth == AuthKind.None
-                    && header.Key.Equals("Authorization", StringComparison.OrdinalIgnoreCase)
+                    && isAuthorization
                     && header.Value.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 {
                     request.Auth = AuthKind.BearerToken;
                     request.BearerToken = header.Value["Bearer ".Length..].Trim();
+                    continue;
+                }
+
+                // A hand-written "Authorization: Basic ..." becomes the Basic type so the
+                // credentials are editable; anything undecodable stays a plain header.
+                if (request.Auth == AuthKind.None
+                    && isAuthorization
+                    && BasicAuth.TryParse(header.Value, out var user, out var password))
+                {
+                    request.Auth = AuthKind.Basic;
+                    request.BasicUsername = user;
+                    request.BasicPassword = password;
                     continue;
                 }
 

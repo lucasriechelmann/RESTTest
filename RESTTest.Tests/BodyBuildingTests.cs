@@ -243,7 +243,7 @@ public sealed class BodyBuildingTests : IDisposable
     /// A one-shot HTTP server on loopback that records the raw request and answers 200. Proves the
     /// bytes on the wire, which a look at the HttpContent object cannot.
     /// </summary>
-    private static async Task<(string BaseUrl, Task<string> Captured)> StartCapturingServer()
+    internal static async Task<(string BaseUrl, Task<string> Captured)> StartCapturingServer()
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();

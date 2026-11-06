@@ -36,10 +36,33 @@ public static class CurlExporter
             parts.Add($"-H {Quote($"{header.Key}: {header.Value}")}");
         }
 
+        if (UsesBasicFlag(request))
+        {
+            parts.Add($"-u {Quote($"{request.BasicUsername}:{request.BasicPassword}")}");
+        }
+
         parts.AddRange(Body(request, method));
 
         return string.Join(" \\\n  ", parts);
     }
+
+    private static bool HasBasic(RequestModel request) =>
+        request.Auth == AuthKind.Basic
+        && (!string.IsNullOrEmpty(request.BasicUsername) || !string.IsNullOrEmpty(request.BasicPassword));
+
+    /// <summary>A colon in the username would be read by curl as the start of the password.</summary>
+    private static bool UsesBasicHeader(RequestModel request) =>
+        HasBasic(request) && request.BasicUsername.Contains(':');
+
+    /// <summary>
+    /// <c>-u</c> reads better than a base64 header and survives a round trip through the importer.
+    /// Not used when a typed Authorization header would replace the credentials anyway.
+    /// </summary>
+    private static bool UsesBasicFlag(RequestModel request) =>
+        HasBasic(request)
+        && !UsesBasicHeader(request)
+        && !(request.Headers ?? []).Any(h =>
+            h.Enabled && h.Key.Trim().Equals("Authorization", StringComparison.OrdinalIgnoreCase));
 
     private static IEnumerable<KeyValueModel> Headers(RequestModel request, string method)
     {
@@ -56,6 +79,25 @@ public static class CurlExporter
             && !Has("Authorization"))
         {
             headers.Insert(0, new KeyValueModel { Key = "Authorization", Value = $"Bearer {request.BearerToken.Trim()}" });
+        }
+
+        // Basic goes out as -u (see Credentials) unless the username holds a colon, which -u cannot express.
+        if (UsesBasicHeader(request) && !Has("Authorization"))
+        {
+            headers.Insert(0, new KeyValueModel
+            {
+                Key = "Authorization",
+                Value = BasicAuth.HeaderValue(request.BasicUsername, request.BasicPassword),
+            });
+        }
+
+        // A query-string key is already in the URL passed to Build.
+        if (request is { Auth: AuthKind.ApiKey, ApiKeyLocation: ApiKeyLocation.Header }
+            && !string.IsNullOrWhiteSpace(request.ApiKeyName)
+            && !string.IsNullOrWhiteSpace(request.ApiKeyValue)
+            && !Has(request.ApiKeyName.Trim()))
+        {
+            headers.Insert(0, new KeyValueModel { Key = request.ApiKeyName.Trim(), Value = request.ApiKeyValue.Trim() });
         }
 
         // The text kinds carry their own Content-Type in the app; curl needs it spelled out.

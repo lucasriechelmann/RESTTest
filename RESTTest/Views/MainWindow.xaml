@@ -200,6 +200,15 @@
                                 <ui:SymbolIcon Symbol="Play24" />
                             </ui:Button.Icon>
                         </ui:Button>
+
+                        <ui:Button Margin="0,0,6,6"
+                                   Command="{Binding ImportCollectionCommand}"
+                                   Content="Import"
+                                   ToolTip="Import a Postman, Insomnia or OpenAPI file as a new collection">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="ArrowImport24" />
+                            </ui:Button.Icon>
+                        </ui:Button>
                     </WrapPanel>
 
                     <TreeView Grid.Row="1"
@@ -227,6 +236,7 @@
                                 <Separator />
                                 <MenuItem Command="{Binding RunSelectedCommand}" Header="Run" />
                                 <MenuItem Command="{Binding ImportCurlCommand}" Header="Import cURL..." />
+                                <MenuItem Command="{Binding ImportCollectionCommand}" Header="Import collection file..." />
                                 <MenuItem Command="{Binding CopyAsCurlCommand}" Header="Copy as cURL" />
                                 <Separator />
                                 <MenuItem Command="{Binding RenameSelectedCommand}" Header="Rename" InputGestureText="F2" />
@@ -674,7 +684,9 @@
                         </TabItem>
 
                         <TabItem Header="Auth">
-                            <StackPanel Margin="0,14,0,0" MaxWidth="560" HorizontalAlignment="Left">
+                            <!-- Scrolls: the Basic and API key forms are taller than the request pane at the minimum window size. -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="0,14,12,8" MaxWidth="560" HorizontalAlignment="Left">
                                 <TextBlock Style="{StaticResource SectionLabelStyle}" Text="Type" />
                                 <ComboBox Width="260"
                                           HorizontalAlignment="Left"
@@ -698,7 +710,59 @@
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                Text="Sent as: Authorization: Bearer &lt;token&gt;" />
                                 </StackPanel>
+
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding IsBasicAuth, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Style="{StaticResource SectionLabelStyle}" Text="Username" />
+                                    <ui:TextBox Text="{Binding BasicUsername, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                    <TextBlock Style="{StaticResource SectionLabelStyle}"
+                                               Margin="0,12,0,0"
+                                               Text="Password" />
+                                    <ui:TextBox Text="{Binding BasicPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                    <TextBlock Margin="0,8,0,0"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="Sent as: Authorization: Basic base64(username:password)"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding IsApiKeyAuth, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Style="{StaticResource SectionLabelStyle}" Text="Add to" />
+                                    <ComboBox Width="260"
+                                              HorizontalAlignment="Left"
+                                              ItemsSource="{Binding ApiKeyLocationOptions}"
+                                              SelectedItem="{Binding ApiKeyPlacement, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource ApiKeyLocationLabel}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <TextBlock Style="{StaticResource SectionLabelStyle}"
+                                               Margin="0,12,0,0"
+                                               Text="Name" />
+                                    <ui:TextBox FontFamily="{StaticResource CodeFont}"
+                                                PlaceholderText="X-API-Key"
+                                                Text="{Binding ApiKeyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                    <TextBlock Style="{StaticResource SectionLabelStyle}"
+                                               Margin="0,12,0,0"
+                                               Text="Value" />
+                                    <ui:TextBox FontFamily="{StaticResource CodeFont}"
+                                                Text="{Binding ApiKeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                    <TextBlock Margin="0,8,0,0"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding ApiKeyHint}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
                             </StackPanel>
+                            </ScrollViewer>
                         </TabItem>
 
                         <TabItem>

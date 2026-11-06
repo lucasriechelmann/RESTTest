@@ -193,11 +193,23 @@ public class CurlParserTests
     }
 
     [Fact]
-    public void Basic_auth_becomes_the_header_curl_would_send()
+    public void Dash_u_becomes_the_basic_auth_type()
     {
         var import = Parse("curl -u ada:secret http://h/");
 
-        Assert.Equal("Basic YWRhOnNlY3JldA==", Header(import, "Authorization"));
+        Assert.Equal(AuthKind.Basic, import.Request.Auth);
+        Assert.Equal("ada", import.Request.BasicUsername);
+        Assert.Equal("secret", import.Request.BasicPassword);
+        Assert.Null(Header(import, "Authorization"));
+    }
+
+    [Fact]
+    public void A_colon_in_the_password_stays_in_the_password()
+    {
+        var import = Parse("curl -u ada:se:cret http://h/");
+
+        Assert.Equal("ada", import.Request.BasicUsername);
+        Assert.Equal("se:cret", import.Request.BasicPassword);
     }
 
     [Fact]
@@ -205,8 +217,30 @@ public class CurlParserTests
     {
         var import = Parse("curl -u ada http://h/");
 
-        Assert.Equal("Basic " + Convert.ToBase64String("ada:"u8.ToArray()), Header(import, "Authorization"));
+        Assert.Equal(AuthKind.Basic, import.Request.Auth);
+        Assert.Equal("ada", import.Request.BasicUsername);
+        Assert.Equal(string.Empty, import.Request.BasicPassword);
         Assert.Contains(import.Warnings, w => w.Contains("-u"));
+    }
+
+    [Fact]
+    public void A_hand_written_basic_header_becomes_the_basic_auth_type()
+    {
+        var import = Parse("curl -H 'Authorization: Basic YWRhOnNlY3JldA==' http://h/");
+
+        Assert.Equal(AuthKind.Basic, import.Request.Auth);
+        Assert.Equal("ada", import.Request.BasicUsername);
+        Assert.Equal("secret", import.Request.BasicPassword);
+        Assert.Null(Header(import, "Authorization"));
+    }
+
+    [Fact]
+    public void An_undecodable_basic_header_is_kept_as_a_plain_header()
+    {
+        var import = Parse("curl -H 'Authorization: Basic not*base64' http://h/");
+
+        Assert.Equal(AuthKind.None, import.Request.Auth);
+        Assert.Equal("Basic not*base64", Header(import, "Authorization"));
     }
 
     [Fact]

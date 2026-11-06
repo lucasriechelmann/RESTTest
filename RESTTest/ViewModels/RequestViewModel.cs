@@ -17,7 +17,10 @@ public partial class RequestViewModel : EditableViewModel
         ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
     public static IReadOnlyList<AuthKind> AuthKinds { get; } =
-        [AuthKind.None, AuthKind.BearerToken];
+        [AuthKind.None, AuthKind.BearerToken, AuthKind.Basic, AuthKind.ApiKey];
+
+    public static IReadOnlyList<ApiKeyLocation> ApiKeyLocations { get; } =
+        [ApiKeyLocation.Header, ApiKeyLocation.Query];
 
     /// <summary>Body types in the order the picker shows them.</summary>
     public static IReadOnlyList<BodyKind> BodyKinds { get; } =
@@ -48,6 +51,21 @@ public partial class RequestViewModel : EditableViewModel
     [ObservableProperty]
     private string _bearerToken = string.Empty;
 
+    [ObservableProperty]
+    private string _basicUsername = string.Empty;
+
+    [ObservableProperty]
+    private string _basicPassword = string.Empty;
+
+    [ObservableProperty]
+    private string _apiKeyName = string.Empty;
+
+    [ObservableProperty]
+    private string _apiKeyValue = string.Empty;
+
+    [ObservableProperty]
+    private ApiKeyLocation _apiKeyPlacement = ApiKeyLocation.Header;
+
     /// <summary>Result of the last format attempt, shown under the body editor.</summary>
     [ObservableProperty]
     private string? _bodyStatus;
@@ -68,6 +86,11 @@ public partial class RequestViewModel : EditableViewModel
         _body = model.Body;
         _auth = model.Auth;
         _bearerToken = model.BearerToken;
+        _basicUsername = model.BasicUsername ?? string.Empty;
+        _basicPassword = model.BasicPassword ?? string.Empty;
+        _apiKeyName = model.ApiKeyName ?? string.Empty;
+        _apiKeyValue = model.ApiKeyValue ?? string.Empty;
+        _apiKeyPlacement = model.ApiKeyLocation;
 
         foreach (var parameter in model.QueryParams)
         {
@@ -150,11 +173,29 @@ public partial class RequestViewModel : EditableViewModel
 
     public IReadOnlyList<AuthKind> AuthOptions => AuthKinds;
 
+    public IReadOnlyList<ApiKeyLocation> ApiKeyLocationOptions => ApiKeyLocations;
+
     /// <summary>False for GET/HEAD/OPTIONS, used to warn that the body will not be sent.</summary>
     public bool SupportsBody => BodyCapableMethods.Contains(Method);
 
     /// <summary>Reveals the token box. A plain bool keeps the XAML free of chained converters.</summary>
     public bool IsBearerAuth => Auth == AuthKind.BearerToken;
+
+    public bool IsBasicAuth => Auth == AuthKind.Basic;
+
+    public bool IsApiKeyAuth => Auth == AuthKind.ApiKey;
+
+    /// <summary>One line under the API key fields saying exactly how it will be sent.</summary>
+    public string ApiKeyHint
+    {
+        get
+        {
+            var name = string.IsNullOrWhiteSpace(ApiKeyName) ? "<name>" : ApiKeyName.Trim();
+            return ApiKeyPlacement == ApiKeyLocation.Query
+                ? $"Sent as: ?{name}=<value> on the URL"
+                : $"Sent as: {name}: <value>";
+        }
+    }
 
     public int EnabledQueryParamCount => QueryParams.Count(p => p.Enabled && !string.IsNullOrWhiteSpace(p.Key));
 
@@ -172,6 +213,11 @@ public partial class RequestViewModel : EditableViewModel
         MultipartParts = [.. MultipartParts.Select(p => p.ToModel())],
         Auth = Auth,
         BearerToken = BearerToken,
+        BasicUsername = BasicUsername,
+        BasicPassword = BasicPassword,
+        ApiKeyName = ApiKeyName,
+        ApiKeyValue = ApiKeyValue,
+        ApiKeyLocation = ApiKeyPlacement,
         QueryParams = [.. QueryParams.Select(p => p.ToModel())],
         Headers = [.. Headers.Select(h => h.ToModel())],
         Assertions = [.. Assertions.Select(a => a.ToModel())],
@@ -284,7 +330,11 @@ public partial class RequestViewModel : EditableViewModel
             or nameof(IsFormBody)
             or nameof(IsMultipartBody)
             or nameof(IsNoBody)
-            or nameof(CanFormatBody);
+            or nameof(CanFormatBody)
+            or nameof(IsBearerAuth)
+            or nameof(IsBasicAuth)
+            or nameof(IsApiKeyAuth)
+            or nameof(ApiKeyHint);
 
     partial void OnMethodChanged(string value) => OnPropertyChanged(nameof(SupportsBody));
 
@@ -302,7 +352,16 @@ public partial class RequestViewModel : EditableViewModel
         BodyStatusIsError = false;
     }
 
-    partial void OnAuthChanged(AuthKind value) => OnPropertyChanged(nameof(IsBearerAuth));
+    partial void OnAuthChanged(AuthKind value)
+    {
+        OnPropertyChanged(nameof(IsBearerAuth));
+        OnPropertyChanged(nameof(IsBasicAuth));
+        OnPropertyChanged(nameof(IsApiKeyAuth));
+    }
+
+    partial void OnApiKeyNameChanged(string value) => OnPropertyChanged(nameof(ApiKeyHint));
+
+    partial void OnApiKeyPlacementChanged(ApiKeyLocation value) => OnPropertyChanged(nameof(ApiKeyHint));
 
     partial void OnBodyChanged(string value)
     {

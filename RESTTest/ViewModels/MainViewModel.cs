@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RESTTest.Models;
 using RESTTest.Services;
+using RESTTest.Services.Importing;
 
 namespace RESTTest.ViewModels;
 
@@ -574,6 +576,55 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
             }
 
             return;
+        }
+    }
+
+    /// <summary>
+    /// Adds a Postman, Insomnia or OpenAPI file to the workspace as a new collection of its own, so
+    /// an import can never overwrite or reshuffle work already in the open one.
+    /// </summary>
+    [RelayCommand]
+    private void ImportCollection()
+    {
+        if (_dialogs.PickFile("Import a collection", CollectionImporter.FileFilter) is not { } path)
+        {
+            return;
+        }
+
+        string text;
+        try
+        {
+            text = File.ReadAllText(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _dialogs.ShowMessage("Could not import", $"The file could not be read: {ex.Message}");
+            return;
+        }
+
+        if (!CollectionImporter.TryImport(text, out var import, out var error))
+        {
+            _dialogs.ShowMessage("Could not import", error ?? "The file could not be read.");
+            return;
+        }
+
+        var collection = CollectionViewModel.FromModel(import!.ToModel());
+        collection.Dirty += OnCollectionDirty;
+
+        Collections.Add(collection);
+        SelectedCollection = collection;
+        OnPropertyChanged(nameof(HasCollections));
+        QueueSave(collection);
+
+        var requests = import.RequestCount;
+        StatusMessage = $"Imported \"{import.Name}\": {requests} request{(requests == 1 ? string.Empty : "s")}.";
+
+        if (import.Warnings.Count > 0)
+        {
+            _dialogs.ShowMessage(
+                $"Imported \"{import.Name}\" with notes",
+                $"{requests} request{(requests == 1 ? string.Empty : "s")} from {import.Format}.{Environment.NewLine}{Environment.NewLine}"
+                + string.Join(Environment.NewLine + Environment.NewLine, import.Warnings));
         }
     }
 

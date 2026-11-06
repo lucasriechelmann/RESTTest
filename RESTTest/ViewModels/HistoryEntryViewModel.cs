@@ -114,9 +114,17 @@ public sealed class HistoryEntryViewModel : ObservableObject
                 parts.Add(query == 1 ? "1 query param" : $"{query} query params");
             }
 
-            if (Model.Request.Auth == AuthKind.BearerToken)
+            var auth = Model.Request.Auth switch
             {
-                parts.Add("Bearer auth");
+                AuthKind.BearerToken => "Bearer auth",
+                AuthKind.Basic => "Basic auth",
+                AuthKind.ApiKey => "API key",
+                _ => null,
+            };
+
+            if (auth is not null)
+            {
+                parts.Add(auth);
             }
 
             return parts.Count == 0 ? "No headers, parameters or auth" : string.Join(" · ", parts);

@@ -27,6 +27,18 @@ public sealed class RequestModel
 
     public string BearerToken { get; set; } = string.Empty;
 
+    /// <summary>Credentials for <see cref="AuthKind.Basic"/>; sent as base64 of "user:password".</summary>
+    public string BasicUsername { get; set; } = string.Empty;
+
+    public string BasicPassword { get; set; } = string.Empty;
+
+    /// <summary>Header or query-parameter name for <see cref="AuthKind.ApiKey"/>, e.g. "X-API-Key" or "api_key".</summary>
+    public string ApiKeyName { get; set; } = string.Empty;
+
+    public string ApiKeyValue { get; set; } = string.Empty;
+
+    public ApiKeyLocation ApiKeyLocation { get; set; } = ApiKeyLocation.Header;
+
     public List<KeyValueModel> QueryParams { get; set; } = [];
 
     public List<KeyValueModel> Headers { get; set; } = [];

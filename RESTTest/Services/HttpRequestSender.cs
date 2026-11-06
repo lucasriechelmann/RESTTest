@@ -77,6 +77,16 @@ public sealed class HttpRequestSender : IHttpRequestSender
         }
 
         var query = BuildQueryString(request.QueryParams);
+
+        // An API key in the query string is part of the address, so it shows in the URL preview,
+        // in history and in a copied cURL command exactly as it is sent.
+        if (request is { Auth: AuthKind.ApiKey, ApiKeyLocation: ApiKeyLocation.Query } && HasApiKey(request))
+        {
+            var key = Uri.EscapeDataString(request.ApiKeyName.Trim())
+                      + "=" + Uri.EscapeDataString(request.ApiKeyValue.Trim());
+            query = query.Length == 0 ? key : query + "&" + key;
+        }
+
         if (query.Length == 0)
         {
             return combined;
@@ -291,15 +301,37 @@ public sealed class HttpRequestSender : IHttpRequestSender
         return content;
     }
 
+    /// <summary>
+    /// Runs before <see cref="ApplyHeaders"/>, so a header typed on the Headers tab with the same
+    /// name replaces whatever the Auth tab put here. A key that travels in the query string is not
+    /// handled here: it is part of the URL, added by <see cref="BuildUrl"/>.
+    /// </summary>
     private static void ApplyAuthentication(HttpRequestMessage message, RequestModel request)
     {
-        if (request.Auth != AuthKind.BearerToken || string.IsNullOrWhiteSpace(request.BearerToken))
+        switch (request.Auth)
         {
-            return;
-        }
+            case AuthKind.BearerToken when !string.IsNullOrWhiteSpace(request.BearerToken):
+                message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.BearerToken.Trim());
+                break;
 
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.BearerToken.Trim());
+            case AuthKind.Basic when HasBasicCredentials(request):
+                message.Headers.TryAddWithoutValidation(
+                    "Authorization", BasicAuth.HeaderValue(request.BasicUsername, request.BasicPassword));
+                break;
+
+            case AuthKind.ApiKey when request.ApiKeyLocation == ApiKeyLocation.Header && HasApiKey(request):
+                // Without validation: key names are free text and values may hold characters the
+                // typed header API rejects. An unusable name is skipped rather than failing the send.
+                message.Headers.TryAddWithoutValidation(request.ApiKeyName.Trim(), request.ApiKeyValue.Trim());
+                break;
+        }
     }
+
+    private static bool HasBasicCredentials(RequestModel request) =>
+        !string.IsNullOrEmpty(request.BasicUsername) || !string.IsNullOrEmpty(request.BasicPassword);
+
+    private static bool HasApiKey(RequestModel request) =>
+        !string.IsNullOrWhiteSpace(request.ApiKeyName) && !string.IsNullOrWhiteSpace(request.ApiKeyValue);
 
     private static void ApplyHeaders(HttpRequestMessage message, RequestModel request)
     {

@@ -30,8 +30,11 @@ public interface IDialogService
     /// </summary>
     void ShowRunner(RunnerViewModel runner);
 
-    /// <summary>Lets the user choose a file to upload. Returns its full path, or null when cancelled.</summary>
-    string? PickFile(string title);
+    /// <summary>
+    /// Lets the user choose a file. Returns its full path, or null when cancelled.
+    /// <paramref name="filter"/> is a Windows file-dialog filter ("Name|*.ext|All|*.*"); null shows every file.
+    /// </summary>
+    string? PickFile(string title, string? filter = null);
 
     /// <summary>Opens the request history. Blocks until the dialog is closed.</summary>
     void ShowHistory(HistoryViewModel history);

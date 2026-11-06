@@ -13,6 +13,8 @@ public sealed class AuthKindLabelConverter : IValueConverter
             {
                 AuthKind.None => "No Authentication",
                 AuthKind.BearerToken => "Bearer Token",
+                AuthKind.Basic => "Basic Auth",
+                AuthKind.ApiKey => "API Key",
                 _ => kind.ToString(),
             }
             : string.Empty;
