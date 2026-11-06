@@ -1213,6 +1213,145 @@
                                         </ItemsControl>
                                     </ScrollViewer>
                                 </TabItem>
+                                <TabItem Header="Diff">
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <!--
+                                            One row for the controls AND the summary: at the minimum window size the response
+                                            pane is short, and a header of three lines left room for a single line of diff.
+                                            A WrapPanel so it wraps instead of clipping in a narrow pane.
+                                        -->
+                                        <WrapPanel Grid.Row="0">
+                                            <ui:Button Margin="0,0,8,4"
+                                                       Padding="8,3"
+                                                       Command="{Binding PinBaselineCommand}"
+                                                       Content="Pin this response"
+                                                       ToolTip="Compare later responses to this request with this one, instead of with the previous one"
+                                                       Visibility="{Binding IsPinned, Converter={StaticResource InverseBoolToVis}}" />
+
+                                            <ui:Button Margin="0,0,8,4"
+                                                       Padding="8,3"
+                                                       Command="{Binding UnpinBaselineCommand}"
+                                                       Content="Unpin"
+                                                       ToolTip="Go back to comparing with the previous response"
+                                                       Visibility="{Binding IsPinned, Converter={StaticResource BoolToVis}}" />
+
+                                            <CheckBox Margin="0,0,0,4"
+                                                      VerticalAlignment="Center"
+                                                      Content="Show unchanged lines"
+                                                      IsChecked="{Binding ShowAllLines, Mode=TwoWay}"
+                                                      Visibility="{Binding HasBaseline, Converter={StaticResource BoolToVis}}" />
+
+                                            <TextBlock Margin="12,0,0,4"
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="Wrap"
+                                                       Visibility="{Binding HasBaseline, Converter={StaticResource BoolToVis}}">
+                                                <Run FontWeight="SemiBold" Text="{Binding DiffSummary, Mode=OneWay}" /><Run Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                     FontSize="12"
+                                                     Text="{Binding DiffNote, Mode=OneWay, StringFormat='   {0}'}" />
+                                            </TextBlock>
+                                        </WrapPanel>
+
+                                        <TextBlock Grid.Row="1"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="Nothing to compare with yet. Send this request again to see what changed, or pin this response to keep it as the baseline."
+                                                   TextWrapping="Wrap"
+                                                   Visibility="{Binding HasBaseline, Converter={StaticResource InverseBoolToVis}}" />
+
+                                        <ListBox Grid.Row="1"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 Focusable="False"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ItemsSource="{Binding DiffLines}"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                 Visibility="{Binding HasDiffLines, Converter={StaticResource BoolToVis}}">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Focusable" Value="False" />
+                                                    <Setter Property="Padding" Value="0" />
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ListBoxItem">
+                                                                <ContentPresenter />
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.Style>
+                                                            <Style TargetType="Grid">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Kind}" Value="Added">
+                                                                        <Setter Property="Background" Value="#2E3FA55A" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Kind}" Value="Removed">
+                                                                        <Setter Property="Background" Value="#2ED9534F" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Kind}" Value="Gap">
+                                                                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Grid.Style>
+
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="40" />
+                                                            <ColumnDefinition Width="40" />
+                                                            <ColumnDefinition Width="20" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="0"
+                                                                   Margin="0,0,6,0"
+                                                                   FontFamily="{StaticResource CodeFont}"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   Text="{Binding OldNumberText}"
+                                                                   TextAlignment="Right" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Margin="0,0,6,0"
+                                                                   FontFamily="{StaticResource CodeFont}"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   Text="{Binding NewNumberText}"
+                                                                   TextAlignment="Right" />
+                                                        <TextBlock Grid.Column="2"
+                                                                   FontFamily="{StaticResource CodeFont}"
+                                                                   FontSize="12"
+                                                                   FontWeight="Bold"
+                                                                   Text="{Binding Marker}" />
+                                                        <TextBlock Grid.Column="3"
+                                                                   FontFamily="{StaticResource CodeFont}"
+                                                                   FontSize="12"
+                                                                   Text="{Binding Text}"
+                                                                   TextWrapping="NoWrap">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Kind}" Value="Gap">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                                            <Setter Property="FontStyle" Value="Italic" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </TabItem>
                                 <TabItem Header="Tests"
                                          Visibility="{Binding HasTests, Converter={StaticResource BoolToVis}}">
                                     <ScrollViewer Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">

@@ -52,6 +52,22 @@ public partial class ResponseViewModel : ObservableObject
     [ObservableProperty]
     private string _saveNote = string.Empty;
 
+    /// <summary>Show every line in the Diff tab instead of just the changes and their surroundings.</summary>
+    [ObservableProperty]
+    private bool _showAllLines;
+
+    /// <summary>"Compared with the previous response (12:31:02)": says what the Diff tab is showing.</summary>
+    [ObservableProperty]
+    private string _diffNote = string.Empty;
+
+    /// <summary>"Status 200 OK → 404 Not Found · +3 -1": the changes at a glance.</summary>
+    [ObservableProperty]
+    private string _diffSummary = string.Empty;
+
+    private HttpExchangeResult? _current;
+    private ResponseBaseline? _baseline;
+    private DiffResult? _diff;
+
     private readonly IDialogService? _dialogs;
     private byte[] _bodyBytes = [];
     private string _contentType = string.Empty;
@@ -67,6 +83,100 @@ public partial class ResponseViewModel : ObservableObject
     }
 
     public ObservableCollection<KeyValueModel> Headers { get; } = [];
+
+    /// <summary>The lines shown in the Diff tab (changes with context, or everything).</summary>
+    public ObservableCollection<DiffLine> DiffLines { get; } = [];
+
+    public bool HasBaseline => _baseline is not null;
+
+    public bool IsPinned => _baseline?.Pinned == true;
+
+    /// <summary>Whether there is a text diff to list; binary and too-large bodies show only the summary.</summary>
+    public bool HasDiffLines => DiffLines.Count > 0;
+
+    /// <summary>A response can be pinned once one has arrived. Set by <see cref="MainViewModel"/>, which owns the per-request memory.</summary>
+    public Action? PinHandler { get; set; }
+
+    public Action? UnpinHandler { get; set; }
+
+    public bool CanPin => _current is not null;
+
+    [RelayCommand(CanExecute = nameof(CanPin))]
+    private void PinBaseline() => PinHandler?.Invoke();
+
+    [RelayCommand]
+    private void UnpinBaseline() => UnpinHandler?.Invoke();
+
+    /// <summary>
+    /// Compares the response now showing with <paramref name="baseline"/> (null clears the comparison).
+    /// Called by <see cref="Load"/>, and again when the user pins or unpins.
+    /// </summary>
+    public void SetBaseline(ResponseBaseline? baseline)
+    {
+        _baseline = baseline;
+        RebuildDiff();
+    }
+
+    private void RebuildDiff()
+    {
+        _diff = null;
+        DiffLines.Clear();
+        DiffSummary = string.Empty;
+        DiffNote = string.Empty;
+
+        if (_baseline is { } baseline && _current is { } current)
+        {
+            DiffNote = baseline.Pinned
+                ? $"Compared with the pinned baseline (received {baseline.When:HH:mm:ss})"
+                : $"Compared with the previous response (received {baseline.When:HH:mm:ss})";
+
+            var changes = new List<string>();
+            var before = baseline.Result;
+
+            if (before.StatusCode != current.StatusCode || before.ReasonPhrase != current.ReasonPhrase)
+            {
+                changes.Add($"Status {before.StatusCode} {before.ReasonPhrase} → {current.StatusCode} {current.ReasonPhrase}".Replace("  ", " "));
+            }
+
+            if (before.IsBinary || current.IsBinary)
+            {
+                changes.Add(before.BodyBytes.AsSpan().SequenceEqual(current.BodyBytes)
+                    ? "Binary body: identical"
+                    : $"Binary body: differs ({DisplayFormat.Size(before.BodyBytes.Length)} → {DisplayFormat.Size(current.BodyBytes.Length)})");
+            }
+            else
+            {
+                // Both sides pretty-printed the same way, so a reformatted body is not reported as a change.
+                _diff = TextDiff.Compare(JsonText.PrettyOrOriginal(before.Body), JsonText.PrettyOrOriginal(current.Body));
+                changes.Add(_diff.IsIdentical ? "Body: no differences" : $"Body: {_diff.Summary}");
+            }
+
+            DiffSummary = string.Join(" · ", changes);
+        }
+
+        RefreshDiffLines();
+        OnPropertyChanged(nameof(HasBaseline));
+        OnPropertyChanged(nameof(IsPinned));
+        OnPropertyChanged(nameof(CanPin));
+        PinBaselineCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshDiffLines()
+    {
+        DiffLines.Clear();
+
+        if (_diff is { TooLarge: false, IsIdentical: false })
+        {
+            foreach (var line in ShowAllLines ? _diff.Lines : _diff.WithContext())
+            {
+                DiffLines.Add(line);
+            }
+        }
+
+        OnPropertyChanged(nameof(HasDiffLines));
+    }
+
+    partial void OnShowAllLinesChanged(bool value) => RefreshDiffLines();
 
     /// <summary>Saving needs a received, non-empty body; an error or an empty 204 has nothing to write.</summary>
     public bool CanSave => HasResponse && !HasError && _bodyBytes.Length > 0;
@@ -92,7 +202,8 @@ public partial class ResponseViewModel : ObservableObject
     /// <summary>Drives the status pill colour: 2xx green, 3xx blue, 4xx amber, 5xx red.</summary>
     public string StatusCategory => DisplayFormat.StatusCategory(StatusCode);
 
-    public void Load(HttpExchangeResult result, IReadOnlyList<AssertionResult>? tests = null)
+    /// <param name="baseline">The earlier response to compare this one with in the Diff tab, or null for none.</param>
+    public void Load(HttpExchangeResult result, IReadOnlyList<AssertionResult>? tests = null, ResponseBaseline? baseline = null)
     {
         RequestUrl = result.Url;
         ElapsedText = DisplayFormat.Duration(result.ElapsedMilliseconds);
@@ -112,6 +223,8 @@ public partial class ResponseViewModel : ObservableObject
             SizeText = string.Empty;
             PrettyBody = string.Empty;
             RawBody = string.Empty;
+            _current = null;
+            SetBaseline(null);
             RaiseSaveChanged();
             return;
         }
@@ -144,6 +257,9 @@ public partial class ResponseViewModel : ObservableObject
 
         HasResponse = true;
         RaiseSaveChanged();
+
+        _current = result;
+        SetBaseline(baseline);
     }
 
     /// <summary>Writes the body to a file the user picks, byte for byte, so a download is not altered by text decoding.</summary>
@@ -202,6 +318,8 @@ public partial class ResponseViewModel : ObservableObject
         BinaryNotice = string.Empty;
         SaveNote = string.Empty;
         RaiseSaveChanged();
+        _current = null;
+        SetBaseline(null);
     }
 
     private void LoadTests(IReadOnlyList<AssertionResult>? tests)

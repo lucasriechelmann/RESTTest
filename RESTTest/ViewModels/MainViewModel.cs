@@ -20,6 +20,7 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     private readonly IHttpRequestSender _sender;
     private readonly IDialogService _dialogs;
     private readonly IHistoryStore _historyStore;
+    private readonly ResponseBaselines _baselines = new();
     private readonly CookieJar _cookieJar;
     private readonly ICookieStore _cookieStore;
 
@@ -79,7 +80,11 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         // something really changed, so an ordinary request does not rewrite the file.
         _cookieJar.Changed += (_, _) => QueueCookieSave();
 
-        Response = new ResponseViewModel(dialogs);
+        Response = new ResponseViewModel(dialogs)
+        {
+            PinHandler = PinResponse,
+            UnpinHandler = UnpinResponse,
+        };
         History = new HistoryViewModel(dialogs, historyStore.Load());
         History.Changed += (_, _) => QueueHistorySave();
         History.SaveAsRequestHandler = SaveHistoryEntryAsRequest;
@@ -507,7 +512,10 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
                 .ConfigureAwait(true);
 
             var tests = AssertionEvaluator.EvaluateAll(model.Assertions, result);
-            Response.Load(result, tests);
+
+            // Compared with the pinned response if there is one, else with what this request returned last time.
+            Response.Load(result, tests, result.Completed ? _baselines.ForNextSend(request) : null);
+            _baselines.Record(request, result);
 
             if (!_cancelledByUser)
             {
@@ -764,6 +772,26 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         {
             _dialogs.CopyToClipboard(ResolvedUrl);
             StatusMessage = "URL copied.";
+        }
+    }
+
+    /// <summary>Keeps the response on screen as the baseline later sends of this request are compared with.</summary>
+    private void PinResponse()
+    {
+        if (ActiveRequest is { } request && _baselines.PinCurrent(request))
+        {
+            Response.SetBaseline(_baselines.ForCurrent(request));
+            StatusMessage = "Pinned. Later responses to this request are compared with it.";
+        }
+    }
+
+    private void UnpinResponse()
+    {
+        if (ActiveRequest is { } request)
+        {
+            _baselines.Unpin(request);
+            Response.SetBaseline(_baselines.ForCurrent(request));
+            StatusMessage = "Unpinned. Responses are compared with the previous one again.";
         }
     }
 

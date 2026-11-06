@@ -50,6 +50,15 @@ The **Import** button in the sidebar toolbar (or the tree context menu, "Import 
 - **What does not, and is reported.** Scripts, OAuth/other auth, binary file bodies, cookie parameters, path parameters like `{id}` (left in the path), and `{{placeholders}}` with no value in the file (left as typed). A notes dialog lists each loss once.
 - Owners: `Services/Importing/` (`CollectionImporter` detects the format; `PostmanImporter`, `InsomniaImporter`, `OpenApiImporter`; shared `BaseUrlGrouper`, `PlaceholderResolver`), `MainViewModel.ImportCollection`.
 
+## Response diff (the Diff tab)
+The response pane has a **Diff** tab that shows what changed since the last time this request was sent. After a send it compares the new response with the request's **previous** response; **Pin this response** keeps one as the baseline instead (later sends of that request are compared with it until **Unpin**). The first send has nothing to compare with and says so.
+- **What is compared.** The summary line gives a status change ("Status 200 OK → 404 Not Found") and the body result ("Body: +3 -4" or "no differences"). Bodies are pretty-printed the same way first, so a reformatted but equal JSON body is not a change. Binary bodies are compared byte for byte ("identical" or "differs", with sizes) and have no line list.
+- **The list** shows removed lines (red, `-`) and added lines (green, `+`) with old and new line numbers, plus 3 lines of context; longer unchanged runs fold into "N unchanged lines". **Show unchanged lines** lists everything. A text over 20,000 lines is not compared; one that differs in more than about 2,000 lines is shown as all removed then all added.
+- **In memory only.** Previous and pinned responses are per request, kept while the app runs, never saved (a response is never persisted). Selecting another request clears the pane, so a comparison appears after a send. A failed send is not a response: it is not compared and does not replace the baseline.
+- At the minimum window size the response pane is short, so the list shows only a couple of lines and scrolls; drag the splitter above it for more.
+- Not built: comparing two history entries.
+- Owners: `Services/TextDiff.cs` (Myers line diff), `DiffResult.cs`, `DiffLine.cs`, `DiffKind.cs`; `ViewModels/ResponseBaselines.cs` (per-request memory), `ResponseBaseline.cs`, `ResponseViewModel` (Diff state, `PinBaselineCommand`), `MainViewModel.PinResponse`.
+
 ## Cookie jar
 Cookies a server sets are kept and sent back on later requests to that host, like a browser: log in once, then call the protected endpoints. The **Cookies** button (cookie icon, top bar) opens the jar: a switch ("Keep cookies and send them on later requests"), a table of every cookie (host, name, value, path, expiry, flags), a delete button per row and "Clear all" (confirms first). Switched off, nothing is stored or sent and requests go out exactly as typed.
 - **Typed Cookie header wins.** A request with its own enabled `Cookie` header skips the jar entirely, so the headers sent are the headers shown.
@@ -83,7 +92,7 @@ Ctrl+F find panel in the JSON editors with amber match highlighting. The panel k
 - Owner: `Controls/JsonEditor.cs`.
 
 ## Not built (do not assume these exist)
-YAML import, Postman environment files, adding a cookie by hand, variables beyond the base URL, binary request bodies (sending a file as the whole body), a GraphQL editor, XML syntax colouring, response diffing, OAuth and other auth types beyond bearer, Basic and API key.
+YAML import, Postman environment files, adding a cookie by hand, variables beyond the base URL, binary request bodies (sending a file as the whole body), a GraphQL editor, XML syntax colouring, OAuth and other auth types beyond bearer, Basic and API key.
 
 <!-- manual:start -->
 <!-- manual:end -->
