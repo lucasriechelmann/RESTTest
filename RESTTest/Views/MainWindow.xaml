@@ -1045,6 +1045,53 @@
                                 </ui:Button>
                             </Grid>
                         </TabItem>
+
+                        <TabItem>
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Settings" />
+                                    <!-- A dot says something here differs from the defaults. -->
+                                    <TextBlock Margin="4,0,0,0"
+                                               Opacity="0.7"
+                                               Text="●"
+                                               ToolTip="Some settings differ from the defaults"
+                                               Visibility="{Binding HasCustomSettings, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                            </TabItem.Header>
+
+                            <!-- Scrolls like Auth: three settings with their notes are taller than a short request pane. -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="0,14,12,8" MaxWidth="560" HorizontalAlignment="Left">
+                                    <TextBlock Style="{StaticResource SectionLabelStyle}" Text="Timeout (seconds)" />
+                                    <ui:TextBox Width="120"
+                                                HorizontalAlignment="Left"
+                                                Text="{Binding TimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                    <TextBlock Margin="0,8,0,0"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding TimeoutHint}"
+                                               TextWrapping="Wrap" />
+
+                                    <CheckBox Margin="0,20,0,0"
+                                              Content="Follow redirects"
+                                              IsChecked="{Binding FollowRedirects, Mode=TwoWay}" />
+                                    <TextBlock Margin="28,2,0,0"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="Off: a 301/302 response is shown as it is, with its Location header, instead of being followed."
+                                               TextWrapping="Wrap" />
+
+                                    <CheckBox Margin="0,16,0,0"
+                                              Content="Verify SSL certificates"
+                                              IsChecked="{Binding VerifySsl, Mode=TwoWay}" />
+                                    <TextBlock Margin="28,2,0,0"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="Off: expired, self-signed and wrong-host certificates are accepted for this request. On: only localhost may have a bad one."
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
                     </TabControl>
 
                     <GridSplitter Grid.Row="3"

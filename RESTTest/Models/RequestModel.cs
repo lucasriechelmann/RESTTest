@@ -6,6 +6,12 @@ namespace RESTTest.Models;
 /// </summary>
 public sealed class RequestModel
 {
+    /// <summary>How long a send may take when a request does not say otherwise.</summary>
+    public const int DefaultTimeoutSeconds = 120;
+
+    /// <summary>The longest timeout the editor accepts (one hour).</summary>
+    public const int MaxTimeoutSeconds = 3600;
+
     public string Method { get; set; } = "GET";
 
     /// <summary>Appended to the active environment's base URL, e.g. "/api/users/1".</summary>
@@ -38,6 +44,21 @@ public sealed class RequestModel
     public string ApiKeyValue { get; set; } = string.Empty;
 
     public ApiKeyLocation ApiKeyLocation { get; set; } = ApiKeyLocation.Header;
+
+    /// <summary>
+    /// Seconds before the send is abandoned, covering the whole exchange including the body. Zero
+    /// means no limit. Files saved before this setting existed have no value and get the default.
+    /// </summary>
+    public int TimeoutSeconds { get; set; } = DefaultTimeoutSeconds;
+
+    /// <summary>Whether a 3xx response is followed to its Location. When off, the 3xx itself is the response.</summary>
+    public bool FollowRedirects { get; set; } = true;
+
+    /// <summary>
+    /// When off, any TLS certificate is accepted (expired, self-signed, wrong host). When on, only
+    /// loopback hosts get that leniency, as before this setting existed.
+    /// </summary>
+    public bool VerifySsl { get; set; } = true;
 
     public List<KeyValueModel> QueryParams { get; set; } = [];
 

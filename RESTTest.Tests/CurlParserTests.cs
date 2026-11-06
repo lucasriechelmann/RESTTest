@@ -538,11 +538,52 @@ public class CurlParserTests
     }
 
     [Fact]
-    public void The_insecure_flag_is_ignored_with_an_explanation()
+    public void The_insecure_flag_turns_certificate_checking_off()
     {
         var import = Parse("curl -k https://h/");
 
-        Assert.Contains(import.Warnings, w => w.Contains("localhost"));
+        Assert.False(import.Request.VerifySsl);
+        Assert.Empty(import.Warnings);
+        Assert.True(Parse("curl https://h/").Request.VerifySsl);
+    }
+
+    [Theory]
+    [InlineData("curl -L http://h/")]
+    [InlineData("curl --location http://h/")]
+    [InlineData("curl -sSL http://h/")]
+    [InlineData("curl --location-trusted http://h/")]
+    public void The_location_flag_follows_redirects(string command)
+    {
+        Assert.True(Parse(command).Request.FollowRedirects);
+    }
+
+    [Fact]
+    public void Without_the_location_flag_redirects_are_not_followed_because_curl_does_not()
+    {
+        Assert.False(Parse("curl http://h/").Request.FollowRedirects);
+    }
+
+    [Theory]
+    [InlineData("curl --max-time 30 http://h/", 30)]
+    [InlineData("curl -m 5 http://h/", 5)]
+    [InlineData("curl -m5 http://h/", 5)]
+    [InlineData("curl -m 2.5 http://h/", 3)]
+    [InlineData("curl -m 0.2 http://h/", 1)]
+    [InlineData("curl -m 0 http://h/", 0)]
+    [InlineData("curl -m 99999 http://h/", 3600)]
+    [InlineData("curl http://h/", 120)]
+    public void Max_time_sets_the_timeout_and_zero_means_no_limit(string command, int expected)
+    {
+        Assert.Equal(expected, Parse(command).Request.TimeoutSeconds);
+    }
+
+    [Fact]
+    public void A_max_time_that_is_not_a_number_is_reported_and_leaves_the_default()
+    {
+        var import = Parse("curl --max-time soon http://h/");
+
+        Assert.Equal(120, import.Request.TimeoutSeconds);
+        Assert.Contains(import.Warnings, w => w.Contains("--max-time"));
     }
 
     [Theory]
@@ -558,7 +599,7 @@ public class CurlParserTests
     [Fact]
     public void An_ignored_option_that_takes_a_value_does_not_swallow_the_url_or_leak_as_one()
     {
-        var import = Parse("curl --max-time 30 --connect-timeout 5 http://h/ok");
+        var import = Parse("curl --connect-timeout 5 --retry 3 http://h/ok");
 
         Assert.Equal("http://h/ok", import.Request.Path);
         Assert.Empty(import.Warnings);

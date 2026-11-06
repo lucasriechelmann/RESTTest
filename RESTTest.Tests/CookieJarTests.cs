@@ -310,7 +310,7 @@ public sealed class CookieJarTests : IDisposable
     /// A loopback server that answers each connection from a list of canned responses, one per
     /// request, and returns the raw text of every request it received.
     /// </summary>
-    private static (string BaseUrl, Task<List<string>> Requests) Serve(params string[] responses)
+    internal static (string BaseUrl, Task<List<string>> Requests) Serve(params string[] responses)
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
@@ -349,10 +349,10 @@ public sealed class CookieJarTests : IDisposable
         return ($"http://127.0.0.1:{port}", requests);
     }
 
-    private static string Ok(string extraHeaders = "") =>
+    internal static string Ok(string extraHeaders = "") =>
         $"HTTP/1.1 200 OK\r\n{extraHeaders}Content-Length: 2\r\nConnection: close\r\n\r\nok";
 
-    private static string Redirect(string location, string extraHeaders = "") =>
+    internal static string Redirect(string location, string extraHeaders = "") =>
         $"HTTP/1.1 302 Found\r\nLocation: {location}\r\n{extraHeaders}Content-Length: 0\r\nConnection: close\r\n\r\n";
 
     private static RequestModel Get(string path = "/", params KeyValueModel[] headers) =>

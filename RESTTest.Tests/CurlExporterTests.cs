@@ -12,7 +12,31 @@ public class CurlExporterTests
     [Fact]
     public void A_plain_get_is_just_curl_and_the_url()
     {
-        Assert.Equal($"curl '{Url}'", Export(new RequestModel { Method = "GET" }));
+        Assert.Equal($"curl -L '{Url}'", Export(new RequestModel { Method = "GET" }));
+        Assert.Equal($"curl '{Url}'", Export(new RequestModel { Method = "GET", FollowRedirects = false }));
+    }
+
+    [Fact]
+    public void Redirects_and_certificate_checks_are_spelled_out_after_the_program_name()
+    {
+        var command = Export(new RequestModel { Method = "POST", FollowRedirects = true, VerifySsl = false });
+
+        Assert.StartsWith($"curl -L -k -X POST '{Url}'", command);
+    }
+
+    [Theory]
+    [InlineData(120, false)]
+    [InlineData(30, true)]
+    [InlineData(0, true)]
+    public void The_timeout_is_written_only_when_it_is_not_the_default(int seconds, bool written)
+    {
+        var command = Export(new RequestModel { TimeoutSeconds = seconds });
+
+        Assert.Equal(written, command.Contains("--max-time"));
+        if (written)
+        {
+            Assert.EndsWith($"--max-time {seconds}", command);
+        }
     }
 
     [Fact]
@@ -26,7 +50,7 @@ public class CurlExporterTests
         });
 
         Assert.Equal(
-            $"curl -X POST '{Url}' \\\n  -H 'X-Id: 1' \\\n  -H 'Content-Type: application/json' \\\n  --data-raw '{{}}'",
+            $"curl -L -X POST '{Url}' \\\n  -H 'X-Id: 1' \\\n  -H 'Content-Type: application/json' \\\n  --data-raw '{{}}'",
             command);
     }
 
@@ -36,19 +60,19 @@ public class CurlExporterTests
     [InlineData("DELETE")]
     public void Other_methods_are_named_with_x(string method)
     {
-        Assert.StartsWith($"curl -X {method} '", Export(new RequestModel { Method = method }));
+        Assert.StartsWith($"curl -L -X {method} '", Export(new RequestModel { Method = method }));
     }
 
     [Fact]
     public void Head_uses_the_head_flag_because_x_head_would_hang()
     {
-        Assert.StartsWith("curl -I '", Export(new RequestModel { Method = "HEAD" }));
+        Assert.StartsWith("curl -L -I '", Export(new RequestModel { Method = "HEAD" }));
     }
 
     [Fact]
     public void A_lower_case_method_is_normalised()
     {
-        Assert.StartsWith("curl -X POST", Export(new RequestModel { Method = "post" }));
+        Assert.StartsWith("curl -L -X POST", Export(new RequestModel { Method = "post" }));
     }
 
     [Fact]
@@ -137,7 +161,7 @@ public class CurlExporterTests
             Headers = [new KeyValueModel { Key = "X-Id", Value = "1" }],
         });
 
-        Assert.Equal($"curl '{Url}' \\\n  -H 'Authorization: Bearer tok' \\\n  -H 'X-Id: 1'", command);
+        Assert.Equal($"curl -L '{Url}' \\\n  -H 'Authorization: Bearer tok' \\\n  -H 'X-Id: 1'", command);
     }
 
     [Fact]

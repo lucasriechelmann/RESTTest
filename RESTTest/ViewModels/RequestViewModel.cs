@@ -66,6 +66,16 @@ public partial class RequestViewModel : EditableViewModel
     [ObservableProperty]
     private ApiKeyLocation _apiKeyPlacement = ApiKeyLocation.Header;
 
+    /// <summary>Seconds before a send is abandoned; 0 means no limit. Kept between 0 and an hour.</summary>
+    [ObservableProperty]
+    private int _timeoutSeconds = RequestModel.DefaultTimeoutSeconds;
+
+    [ObservableProperty]
+    private bool _followRedirects = true;
+
+    [ObservableProperty]
+    private bool _verifySsl = true;
+
     /// <summary>Result of the last format attempt, shown under the body editor.</summary>
     [ObservableProperty]
     private string? _bodyStatus;
@@ -91,6 +101,9 @@ public partial class RequestViewModel : EditableViewModel
         _apiKeyName = model.ApiKeyName ?? string.Empty;
         _apiKeyValue = model.ApiKeyValue ?? string.Empty;
         _apiKeyPlacement = model.ApiKeyLocation;
+        _timeoutSeconds = Math.Clamp(model.TimeoutSeconds, 0, RequestModel.MaxTimeoutSeconds);
+        _followRedirects = model.FollowRedirects;
+        _verifySsl = model.VerifySsl;
 
         foreach (var parameter in model.QueryParams)
         {
@@ -197,6 +210,15 @@ public partial class RequestViewModel : EditableViewModel
         }
     }
 
+    /// <summary>True when any send setting differs from the default; marks the Settings tab header.</summary>
+    public bool HasCustomSettings =>
+        TimeoutSeconds != RequestModel.DefaultTimeoutSeconds || !FollowRedirects || !VerifySsl;
+
+    /// <summary>One line under the timeout box that says what the number means.</summary>
+    public string TimeoutHint => TimeoutSeconds == 0
+        ? "No time limit: the request waits until the server answers or you press Cancel."
+        : $"The request is abandoned after {TimeoutSeconds} second{(TimeoutSeconds == 1 ? string.Empty : "s")} (whole exchange, body included).";
+
     public int EnabledQueryParamCount => QueryParams.Count(p => p.Enabled && !string.IsNullOrWhiteSpace(p.Key));
 
     public int EnabledHeaderCount => Headers.Count(h => h.Enabled && !string.IsNullOrWhiteSpace(h.Key));
@@ -218,6 +240,9 @@ public partial class RequestViewModel : EditableViewModel
         ApiKeyName = ApiKeyName,
         ApiKeyValue = ApiKeyValue,
         ApiKeyLocation = ApiKeyPlacement,
+        TimeoutSeconds = TimeoutSeconds,
+        FollowRedirects = FollowRedirects,
+        VerifySsl = VerifySsl,
         QueryParams = [.. QueryParams.Select(p => p.ToModel())],
         Headers = [.. Headers.Select(h => h.ToModel())],
         Assertions = [.. Assertions.Select(a => a.ToModel())],
@@ -334,7 +359,9 @@ public partial class RequestViewModel : EditableViewModel
             or nameof(IsBearerAuth)
             or nameof(IsBasicAuth)
             or nameof(IsApiKeyAuth)
-            or nameof(ApiKeyHint);
+            or nameof(ApiKeyHint)
+            or nameof(HasCustomSettings)
+            or nameof(TimeoutHint);
 
     partial void OnMethodChanged(string value) => OnPropertyChanged(nameof(SupportsBody));
 
@@ -358,6 +385,24 @@ public partial class RequestViewModel : EditableViewModel
         OnPropertyChanged(nameof(IsBasicAuth));
         OnPropertyChanged(nameof(IsApiKeyAuth));
     }
+
+    partial void OnTimeoutSecondsChanged(int value)
+    {
+        // A typed 99999 or -5 snaps to the nearest allowed value instead of being stored.
+        var clamped = Math.Clamp(value, 0, RequestModel.MaxTimeoutSeconds);
+        if (clamped != value)
+        {
+            TimeoutSeconds = clamped;
+            return;
+        }
+
+        OnPropertyChanged(nameof(HasCustomSettings));
+        OnPropertyChanged(nameof(TimeoutHint));
+    }
+
+    partial void OnFollowRedirectsChanged(bool value) => OnPropertyChanged(nameof(HasCustomSettings));
+
+    partial void OnVerifySslChanged(bool value) => OnPropertyChanged(nameof(HasCustomSettings));
 
     partial void OnApiKeyNameChanged(string value) => OnPropertyChanged(nameof(ApiKeyHint));
 

@@ -12,8 +12,6 @@ namespace RESTTest.ViewModels;
 /// </summary>
 public partial class RunnerViewModel : ObservableObject
 {
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(120);
-
     private readonly IHttpRequestSender _sender;
     private readonly string? _baseUrl;
 
@@ -98,12 +96,9 @@ public partial class RunnerViewModel : ObservableObject
 
                 item.State = RunItemState.Running;
 
-                // Each request gets its own timeout, linked to the run so Cancel still stops it.
-                using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(runToken);
-                requestCancellation.CancelAfter(RequestTimeout);
-
+                // Each request's own timeout is applied by the sender; the run's token still stops it.
                 var result = await _sender
-                    .SendAsync(_baseUrl, item.Request, requestCancellation.Token)
+                    .SendAsync(_baseUrl, item.Request, runToken)
                     .ConfigureAwait(true);
 
                 if (runToken.IsCancellationRequested)

@@ -405,6 +405,26 @@ public static class CurlParser
         private string _basicPassword = string.Empty;
         private bool _json;
 
+        // curl follows no redirect unless -L is given, so an import without it does not follow either.
+        private bool _followRedirects;
+        private bool _verifySsl = true;
+        private int _timeoutSeconds = RequestModel.DefaultTimeoutSeconds;
+
+        /// <summary>Reads <c>--max-time</c>; zero means no limit, as in curl.</summary>
+        private void ReadMaxTime(string raw)
+        {
+            if (double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var seconds)
+                && seconds >= 0)
+            {
+                // Fractions round up so a 0.5 s limit is not read as "no limit".
+                _timeoutSeconds = (int)Math.Min(Math.Ceiling(seconds), RequestModel.MaxTimeoutSeconds);
+            }
+            else
+            {
+                _warnings.Add($"Ignored --max-time {raw}: it is not a number of seconds.");
+            }
+        }
+
         /// <summary>
         /// True once any data or form option was seen, even an empty one or one that was skipped
         /// (a file read). curl sends a POST for all of them, so the method follows this.
@@ -441,6 +461,10 @@ public static class CurlParser
 
             ApplyAuthAndHeaders(request);
             ApplyBody(request);
+
+            request.FollowRedirects = _followRedirects;
+            request.VerifySsl = _verifySsl;
+            request.TimeoutSeconds = _timeoutSeconds;
 
             request.Method = _method
                              ?? (_head ? "HEAD"
@@ -645,7 +669,16 @@ public static class CurlParser
                     break;
 
                 case "insecure":
-                    _warnings.Add("-k/--insecure was ignored: certificate errors are only tolerated for localhost.");
+                    _verifySsl = false;
+                    break;
+
+                case "location":
+                case "location-trusted":
+                    _followRedirects = true;
+                    break;
+
+                case "max-time":
+                    ReadMaxTime(value!);
                     break;
 
                 case "output":

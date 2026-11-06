@@ -502,7 +502,8 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         StatusMessage = null;
 
         _sendCancellation?.Dispose();
-        _sendCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        // No deadline here: the request's own timeout is applied by the sender.
+        _sendCancellation = new CancellationTokenSource();
 
         try
         {

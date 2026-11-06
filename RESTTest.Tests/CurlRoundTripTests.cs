@@ -139,6 +139,30 @@ public class CurlRoundTripTests
         AssertSameRows(original.Headers, back.Headers);
     }
 
+    [Theory]
+    [InlineData(true, true, 120)]
+    [InlineData(false, true, 120)]
+    [InlineData(true, false, 5)]
+    [InlineData(false, false, 0)]
+    [InlineData(true, true, 3600)]
+    public void Redirect_certificate_and_timeout_settings_survive(bool follow, bool verify, int seconds)
+    {
+        var original = new RequestModel
+        {
+            Method = "POST",
+            Path = "/slow",
+            FollowRedirects = follow,
+            VerifySsl = verify,
+            TimeoutSeconds = seconds,
+        };
+
+        var back = RoundTrip(original);
+
+        Assert.Equal(follow, back.FollowRedirects);
+        Assert.Equal(verify, back.VerifySsl);
+        Assert.Equal(seconds, back.TimeoutSeconds);
+    }
+
     [Fact]
     public void A_head_request_and_a_delete_keep_their_methods()
     {

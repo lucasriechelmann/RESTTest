@@ -1,9 +1,11 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Security;
+using System.Security.Authentication;
 using System.Text;
 using RESTTest.Models;
 
@@ -25,12 +27,14 @@ public sealed class HttpRequestSender : IHttpRequestSender
         "POST", "PUT", "PATCH", "DELETE",
     };
 
-    // Single clients for the process lifetime: a client per request exhausts sockets. One has no
-    // cookie handling at all (jar switched off, or the request types its own Cookie header, so the
-    // headers sent are exactly the ones shown); the other reads and writes the cookie jar.
-    private static readonly HttpClient Client = CreateClient(null);
+    // Clients live for the process lifetime: a client per request exhausts sockets. Redirect
+    // following and certificate checking are properties of the handler, so there is one client per
+    // combination (at most four per pool), created the first time a request needs it. One pool has
+    // no cookie handling at all (jar switched off, or the request types its own Cookie header, so
+    // the headers sent are exactly the ones shown); the other reads and writes the cookie jar.
+    private static readonly ClientPool NoCookieClients = new(null);
 
-    private readonly HttpClient _jarClient;
+    private readonly ClientPool _jarClients;
 
     public HttpRequestSender()
         : this(new CookieJar())
@@ -40,35 +44,59 @@ public sealed class HttpRequestSender : IHttpRequestSender
     public HttpRequestSender(CookieJar jar)
     {
         Jar = jar;
-        _jarClient = CreateClient(jar.Container);
+        _jarClients = new ClientPool(jar.Container);
     }
 
     /// <summary>The cookies kept between requests. Shared with the Cookies dialog.</summary>
     public CookieJar Jar { get; }
 
-    private static HttpClient CreateClient(CookieContainer? cookies)
+    private sealed class ClientPool(CookieContainer? cookies)
+    {
+        private readonly ConcurrentDictionary<(bool FollowRedirects, bool VerifySsl), HttpClient> _clients = new();
+
+        public HttpClient Get(bool followRedirects, bool verifySsl) =>
+            _clients.GetOrAdd((followRedirects, verifySsl), key => CreateClient(cookies, key.FollowRedirects, key.VerifySsl));
+    }
+
+    private static HttpClient CreateClient(CookieContainer? cookies, bool followRedirects, bool verifySsl)
     {
         var handler = new SocketsHttpHandler
         {
-            AllowAutoRedirect = true,
+            // Off, a 3xx comes back as the response, with its Location header, for the user to read.
+            AllowAutoRedirect = followRedirects,
             // The handler (not this class) applies cookies, so those set on a redirect response survive.
             UseCookies = cookies is not null,
             CookieContainer = cookies ?? new CookieContainer(),
             AutomaticDecompression = DecompressionMethods.All,
             SslOptions = new SslClientAuthenticationOptions
             {
-                // Self-signed certificates are normal on a dev box, so trust loopback only.
-                RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
-                    errors == SslPolicyErrors.None
-                    || (sender is string host && IsLoopbackHost(host))
-                    || (sender is HttpRequestMessage { RequestUri: { } uri } && IsLoopbackHost(uri.Host)),
+                // Self-signed certificates are normal on a dev box, so by default trust loopback only.
+                // A request that turns verification off accepts any certificate, on purpose.
+                RemoteCertificateValidationCallback = (sender, _, _, errors) =>
+                    IsCertificateAccepted(verifySsl, sender, errors),
             },
         };
 
-        // Per-request deadlines come from a CancellationTokenSource instead, so the Cancel
-        // button works and the timeout can differ per call.
+        // Per-request deadlines come from a CancellationTokenSource instead (see SendAsync), so
+        // the Cancel button works and the timeout can differ per call.
         return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
     }
+
+    /// <summary>
+    /// Whether to go ahead with a TLS connection. A clean certificate always passes. A flawed one
+    /// passes when the request turned verification off, or when the server is on this machine
+    /// (self-signed certificates are normal there). <paramref name="sender"/> is the host name or
+    /// the request message, depending on how the handler calls back.
+    /// </summary>
+    public static bool IsCertificateAccepted(bool verifySsl, object? sender, SslPolicyErrors errors) =>
+        errors == SslPolicyErrors.None
+        || !verifySsl
+        || (sender is string host && IsLoopbackHost(host))
+        || (sender is HttpRequestMessage { RequestUri: { } uri } && IsLoopbackHost(uri.Host));
+
+    /// <summary>The timeout to apply: a missing or damaged value falls back to the default, zero means none.</summary>
+    public static int ResolveTimeoutSeconds(int seconds) =>
+        seconds < 0 ? RequestModel.DefaultTimeoutSeconds : Math.Min(seconds, RequestModel.MaxTimeoutSeconds);
 
     private static bool IsLoopbackHost(string host) =>
         host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
@@ -165,6 +193,15 @@ public sealed class HttpRequestSender : IHttpRequestSender
                 $"'{url}' is not a valid http or https URL.", 0);
         }
 
+        // The deadline belongs to the request, so it is applied here and not by the caller. It is
+        // linked to the caller's token, which keeps Cancel and a run's cancel working.
+        var timeoutSeconds = ResolveTimeoutSeconds(request.TimeoutSeconds);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (timeoutSeconds > 0)
+        {
+            deadline.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        }
+
         try
         {
             using var message = new HttpRequestMessage(new HttpMethod(method), uri);
@@ -175,8 +212,10 @@ public sealed class HttpRequestSender : IHttpRequestSender
             // A typed Cookie header means "send exactly this": the jar stays out of that request.
             var useJar = Jar.Enabled && !(request.Headers ?? []).Any(h => h.Enabled && h.Key.Trim().Equals("Cookie", StringComparison.OrdinalIgnoreCase));
 
-            using var response = await (useJar ? _jarClient : Client)
-                .SendAsync(message, HttpCompletionOption.ResponseContentRead, cancellationToken)
+            var client = (useJar ? _jarClients : NoCookieClients).Get(request.FollowRedirects, request.VerifySsl);
+
+            using var response = await client
+                .SendAsync(message, HttpCompletionOption.ResponseContentRead, deadline.Token)
                 .ConfigureAwait(false);
 
             if (useJar)
@@ -184,7 +223,7 @@ public sealed class HttpRequestSender : IHttpRequestSender
                 Jar.NotifyMaybeChanged();
             }
 
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            var bytes = await response.Content.ReadAsByteArrayAsync(deadline.Token).ConfigureAwait(false);
             stopwatch.Stop();
 
             var contentType = response.Content.Headers.ContentType?.ToString() ?? string.Empty;
@@ -214,13 +253,24 @@ public sealed class HttpRequestSender : IHttpRequestSender
         catch (OperationCanceledException)
         {
             stopwatch.Stop();
-            return HttpExchangeResult.Failure(url, method, "The request timed out.", stopwatch.ElapsedMilliseconds);
+            return HttpExchangeResult.Failure(url, method,
+                $"The request timed out after {timeoutSeconds} second{(timeoutSeconds == 1 ? string.Empty : "s")}. " +
+                "Raise the timeout on the Settings tab if the server is just slow.",
+                stopwatch.ElapsedMilliseconds);
         }
         catch (HttpRequestException ex)
         {
             stopwatch.Stop();
             // The inner exception holds the actionable detail (refused, DNS, TLS).
             var detail = ex.InnerException?.Message ?? ex.Message;
+
+            // A refused certificate is the one transport failure the user can fix from this app.
+            if (request.VerifySsl && ex.InnerException is AuthenticationException)
+            {
+                detail = $"The server's certificate could not be verified ({detail.TrimEnd('.')}). " +
+                         "To send anyway, turn off Verify SSL certificates on the Settings tab.";
+            }
+
             return HttpExchangeResult.Failure(url, method, detail, stopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)

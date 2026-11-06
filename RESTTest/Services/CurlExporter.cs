@@ -25,12 +25,16 @@ public static class CurlExporter
     {
         var method = string.IsNullOrWhiteSpace(request.Method) ? "GET" : request.Method.Trim().ToUpperInvariant();
 
+        // curl follows no redirect and checks every certificate unless told, so the settings that
+        // differ from that are spelled out, right after the program name as in "curl -sSL".
+        var flags = (request.FollowRedirects ? " -L" : string.Empty) + (request.VerifySsl ? string.Empty : " -k");
+
         var first = method switch
         {
             // "-X HEAD" makes curl wait for a body that never comes; -I is the right spelling.
-            "HEAD" => "curl -I",
-            "GET" => "curl",
-            _ => $"curl -X {method}",
+            "HEAD" => $"curl{flags} -I",
+            "GET" => $"curl{flags}",
+            _ => $"curl{flags} -X {method}",
         };
 
         var parts = new List<string> { $"{first} {Quote(url)}" };
@@ -54,6 +58,13 @@ public static class CurlExporter
         }
 
         parts.AddRange(Body(request, method));
+
+        // Written only when it differs from the app's default, so most commands stay short; 0 is
+        // curl's own spelling of "no limit".
+        if (request.TimeoutSeconds != RequestModel.DefaultTimeoutSeconds)
+        {
+            parts.Add($"--max-time {Math.Max(0, request.TimeoutSeconds)}");
+        }
 
         return string.Join(" \\\n  ", parts);
     }
