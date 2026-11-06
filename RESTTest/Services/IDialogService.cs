@@ -21,6 +21,12 @@ public interface IDialogService
     /// </summary>
     void ShowEnvironments(CollectionViewModel collection);
 
+    /// <summary>
+    /// Shows the run report for a runner that has already been started. Blocks until the dialog is
+    /// closed, and cancels the run if it is still going at that point.
+    /// </summary>
+    void ShowRunner(RunnerViewModel runner);
+
     /// <summary>Puts text on the clipboard, swallowing the transient failures the clipboard throws.</summary>
     void CopyToClipboard(string text);
 }

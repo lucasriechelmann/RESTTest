@@ -40,7 +40,19 @@ public partial class ResponseViewModel : ObservableObject
 
     public ObservableCollection<KeyValueModel> Headers { get; } = [];
 
+    /// <summary>Outcome of the request's assertions for this response. Empty when it has none.</summary>
+    public ObservableCollection<AssertionResult> TestResults { get; } = [];
+
     public bool HasError => !string.IsNullOrEmpty(Error);
+
+    public bool HasTests => TestResults.Count > 0;
+
+    public bool AllTestsPassed => TestResults.All(t => t.Passed);
+
+    /// <summary>"3/4 tests passed", shown next to the status pill.</summary>
+    public string TestSummary => HasTests
+        ? $"{TestResults.Count(t => t.Passed)}/{TestResults.Count} tests passed"
+        : string.Empty;
 
     /// <summary>Drives the status pill colour: 2xx green, 3xx blue, 4xx amber, 5xx red.</summary>
     public string StatusCategory => StatusCode switch
@@ -52,11 +64,12 @@ public partial class ResponseViewModel : ObservableObject
         _ => "Unknown",
     };
 
-    public void Load(HttpExchangeResult result)
+    public void Load(HttpExchangeResult result, IReadOnlyList<AssertionResult>? tests = null)
     {
         RequestUrl = result.Url;
         ElapsedText = FormatDuration(result.ElapsedMilliseconds);
         Headers.Clear();
+        LoadTests(tests);
 
         if (!result.Completed)
         {
@@ -97,6 +110,21 @@ public partial class ResponseViewModel : ObservableObject
         RawBody = string.Empty;
         RequestUrl = string.Empty;
         Headers.Clear();
+        LoadTests(null);
+    }
+
+    private void LoadTests(IReadOnlyList<AssertionResult>? tests)
+    {
+        TestResults.Clear();
+
+        foreach (var test in tests ?? [])
+        {
+            TestResults.Add(test);
+        }
+
+        OnPropertyChanged(nameof(HasTests));
+        OnPropertyChanged(nameof(AllTestsPassed));
+        OnPropertyChanged(nameof(TestSummary));
     }
 
     private static string FormatDuration(long milliseconds) =>

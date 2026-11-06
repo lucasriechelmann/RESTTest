@@ -20,4 +20,7 @@ public sealed class RequestModel
     public List<KeyValueModel> QueryParams { get; set; } = [];
 
     public List<KeyValueModel> Headers { get; set; } = [];
+
+    /// <summary>Checks evaluated against the response after every send and every collection run.</summary>
+    public List<AssertionModel> Assertions { get; set; } = [];
 }

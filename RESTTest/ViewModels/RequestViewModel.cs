@@ -70,6 +70,11 @@ public partial class RequestViewModel : EditableViewModel
             Headers.Add(new KeyValueViewModel(header));
         }
 
+        foreach (var assertion in model.Assertions)
+        {
+            Assertions.Add(new AssertionViewModel(assertion));
+        }
+
         Wire();
     }
 
@@ -77,6 +82,7 @@ public partial class RequestViewModel : EditableViewModel
     {
         TrackChildren(QueryParams);
         TrackChildren(Headers);
+        TrackChildren(Assertions);
 
         // The tab headers show how many rows are actually in play. Dirty already fires for any
         // nested edit, and the count properties are transient, so this cannot recurse.
@@ -84,12 +90,15 @@ public partial class RequestViewModel : EditableViewModel
         {
             OnPropertyChanged(nameof(EnabledQueryParamCount));
             OnPropertyChanged(nameof(EnabledHeaderCount));
+            OnPropertyChanged(nameof(EnabledAssertionCount));
         };
     }
 
     public ObservableCollection<KeyValueViewModel> QueryParams { get; } = [];
 
     public ObservableCollection<KeyValueViewModel> Headers { get; } = [];
+
+    public ObservableCollection<AssertionViewModel> Assertions { get; } = [];
 
     /// <summary>Instance views of the option lists, so XAML can bind them without x:Static.</summary>
     public IReadOnlyList<string> MethodOptions => Methods;
@@ -106,6 +115,8 @@ public partial class RequestViewModel : EditableViewModel
 
     public int EnabledHeaderCount => Headers.Count(h => h.Enabled && !string.IsNullOrWhiteSpace(h.Key));
 
+    public int EnabledAssertionCount => Assertions.Count(a => a.Enabled);
+
     public RequestModel ToModel() => new()
     {
         Method = Method,
@@ -115,6 +126,7 @@ public partial class RequestViewModel : EditableViewModel
         BearerToken = BearerToken,
         QueryParams = [.. QueryParams.Select(p => p.ToModel())],
         Headers = [.. Headers.Select(h => h.ToModel())],
+        Assertions = [.. Assertions.Select(a => a.ToModel())],
     };
 
     [RelayCommand]
@@ -138,6 +150,18 @@ public partial class RequestViewModel : EditableViewModel
         if (header is not null)
         {
             Headers.Remove(header);
+        }
+    }
+
+    [RelayCommand]
+    private void AddAssertion() => Assertions.Add(new AssertionViewModel());
+
+    [RelayCommand]
+    private void RemoveAssertion(AssertionViewModel? assertion)
+    {
+        if (assertion is not null)
+        {
+            Assertions.Remove(assertion);
         }
     }
 
@@ -178,7 +202,8 @@ public partial class RequestViewModel : EditableViewModel
         propertyName is nameof(BodyStatus)
             or nameof(BodyStatusIsError)
             or nameof(EnabledQueryParamCount)
-            or nameof(EnabledHeaderCount);
+            or nameof(EnabledHeaderCount)
+            or nameof(EnabledAssertionCount);
 
     partial void OnMethodChanged(string value) => OnPropertyChanged(nameof(SupportsBody));
 

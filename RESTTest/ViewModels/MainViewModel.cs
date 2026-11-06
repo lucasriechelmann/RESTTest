@@ -419,11 +419,12 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
 
         try
         {
+            var model = request.ToModel();
             var result = await _sender
-                .SendAsync(collection.ActiveBaseUrl, request.ToModel(), _sendCancellation.Token)
+                .SendAsync(collection.ActiveBaseUrl, model, _sendCancellation.Token)
                 .ConfigureAwait(true);
 
-            Response.Load(result);
+            Response.Load(result, AssertionEvaluator.EvaluateAll(model.Assertions, result));
         }
         finally
         {
@@ -433,6 +434,40 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
 
     [RelayCommand]
     private void CancelSend() => _sendCancellation?.Cancel();
+
+    /// <summary>
+    /// Runs every request in the selected folder, or in the whole collection when a request (or
+    /// nothing) is selected, against the collection's active base URL.
+    /// </summary>
+    [RelayCommand]
+    private void RunSelected()
+    {
+        if (SelectedCollection is not { } collection)
+        {
+            return;
+        }
+
+        var folder = SelectedNode is { IsFolder: true } selectedFolder ? selectedFolder : null;
+        var nodes = folder is null ? collection.AllNodes() : folder.SelfAndDescendants();
+        var requests = nodes.Where(node => node.IsRequest).ToList();
+
+        if (requests.Count == 0)
+        {
+            StatusMessage = "There are no requests to run.";
+            return;
+        }
+
+        StatusMessage = null;
+
+        var title = folder is null ? collection.Name : $"{collection.Name} / {folder.Name}";
+        var items = requests.Select(node => new RunItemViewModel(node.Name, node.Request!.ToModel()));
+        var runner = new RunnerViewModel(_sender, collection.ActiveBaseUrl, title, items);
+
+        // Start first, then show: the dialog blocks, and the run's continuations are delivered by
+        // the dispatcher loop that ShowDialog keeps pumping.
+        _ = runner.RunAsync();
+        _dialogs.ShowRunner(runner);
+    }
 
     [RelayCommand]
     private void CopyResolvedUrl()

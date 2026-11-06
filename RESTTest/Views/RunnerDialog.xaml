@@ -1,0 +1,201 @@
+<ui:FluentWindow x:Class="RESTTest.Views.RunnerDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:vm="clr-namespace:RESTTest.ViewModels"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 mc:Ignorable="d"
+                 d:DataContext="{d:DesignInstance Type=vm:RunnerViewModel}"
+                 Title="Run results"
+                 Width="760"
+                 Height="600"
+                 MinWidth="560"
+                 MinHeight="360"
+                 ShowInTaskbar="False"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Run results" ShowMaximize="False" ShowMinimize="False" />
+
+        <!-- What was run, against what, and how it is going. -->
+        <StackPanel Grid.Row="1" Margin="20,4,20,12">
+            <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Title}" />
+            <TextBlock Margin="0,2,0,0"
+                       FontFamily="{StaticResource CodeFont}"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="{Binding BaseUrlText}" />
+
+            <ProgressBar Margin="0,12,0,6"
+                         Height="4"
+                         Maximum="{Binding TotalCount, Mode=OneWay}"
+                         Value="{Binding CompletedCount, Mode=OneWay}" />
+
+            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
+                <Run Text="Running " /><Run Text="{Binding CompletedCount, Mode=OneWay}" /><Run Text=" of " /><Run Text="{Binding TotalCount, Mode=OneWay}" /><Run Text="..." />
+            </TextBlock>
+
+            <TextBlock FontWeight="SemiBold"
+                       Text="{Binding Summary}"
+                       Visibility="{Binding IsRunning, Converter={StaticResource InverseBoolToVis}}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding AllPassed}" Value="True">
+                                <Setter Property="Foreground" Value="#3FA55A" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding HasFailures}" Value="True">
+                                <Setter Property="Foreground" Value="#D9534F" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="2" Margin="20,0,20,0" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Items}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,6"
+                                Padding="10,8"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <!-- State glyph: colour and shape both carry the state. -->
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                            <Setter Property="Text" Value="·" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding State}" Value="Running">
+                                                    <Setter Property="Text" Value="…" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding State}" Value="Passed">
+                                                    <Setter Property="Text" Value="✓" />
+                                                    <Setter Property="Foreground" Value="#3FA55A" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding State}" Value="Failed">
+                                                    <Setter Property="Text" Value="✕" />
+                                                    <Setter Property="Foreground" Value="#D9534F" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding State}" Value="Unchecked">
+                                                    <Setter Property="Text" Value="–" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding State}" Value="Skipped">
+                                                    <Setter Property="Text" Value="»" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                                    <TextBlock MinWidth="46"
+                                               VerticalAlignment="Center"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{Binding Method, Converter={StaticResource MethodBrush}}"
+                                               Text="{Binding Method}" />
+                                    <TextBlock VerticalAlignment="Center"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding Name}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Margin="10,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontFamily="{StaticResource CodeFont}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding Path}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
+                                    <TextBlock VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding StatusText}" />
+                                    <TextBlock Margin="10,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding ElapsedText}" />
+                                </StackPanel>
+
+                                <!-- Why it failed, one line per failed assertion. -->
+                                <ItemsControl Grid.Row="1"
+                                              Grid.Column="1"
+                                              Grid.ColumnSpan="2"
+                                              Margin="0,6,0,0"
+                                              ItemsSource="{Binding Failures}"
+                                              Visibility="{Binding HasFailures, Converter={StaticResource BoolToVis}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Margin="0,0,0,2"
+                                                       FontSize="12"
+                                                       Foreground="#D9534F"
+                                                       Text="{Binding}"
+                                                       TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Grid Grid.Row="3" Margin="20,12,20,20">
+            <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                <ui:Button Command="{Binding RunAgainCommand}" Content="Run again">
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon Symbol="ArrowClockwise24" />
+                    </ui:Button.Icon>
+                </ui:Button>
+
+                <ui:Button Margin="6,0,0,0"
+                           Command="{Binding CancelCommand}"
+                           Content="Stop">
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon Symbol="Stop24" />
+                    </ui:Button.Icon>
+                </ui:Button>
+            </StackPanel>
+
+            <ui:Button MinWidth="92"
+                       HorizontalAlignment="Right"
+                       Appearance="Primary"
+                       Content="Close"
+                       IsDefault="True"
+                       Click="OnClose" />
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

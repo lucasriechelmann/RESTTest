@@ -23,6 +23,18 @@ Send (Ctrl+Enter) with cancel and a 120 s timeout; response pane shows status pi
 - Owner: `ViewModels/MainViewModel.cs` (Sending region), `ResponseViewModel.cs`, `Services/HttpRequestSender.cs`, `HttpExchangeResult.cs`.
 - Colours: `Converters/StatusBrushConverter.cs`, `MethodBrushConverter.cs`.
 
+## Assertions (the Tests tab)
+Per-request checks against the response: target (status code, response time, header, JSON path, body text), operator (equals, does not equal, contains, does not contain, exists, less/greater than) and an expected value. The operator list narrows to what suits the target. Evaluated after every Send; the response pane shows "n/m tests passed" next to the status pill and a Tests tab listing each result. Disabled rows are skipped. A transport failure fails every assertion.
+- Owner: `ViewModels/AssertionViewModel.cs` (persisted row), `RequestViewModel` (`Assertions`, `AddAssertion`/`RemoveAssertion`), `ResponseViewModel` (`TestResults`, runtime only).
+- Logic: `Services/AssertionEvaluator.cs` (pure), `Services/JsonPathLite.cs` (`$.a.b[0]` and `['quoted']` only, no wildcards or filters), `AssertionResult` record.
+- Persistence: `Models/AssertionModel.cs`, `AssertionTarget.cs`, `AssertionOperator.cs`; stored in `RequestModel.Assertions`.
+- View: Tests tab in `Views/MainWindow.xaml`; labels via `Converters/AssertionLabelConverter.cs`.
+
+## Collection runner
+Run button (and context menu) runs every request in the selected folder, or the whole collection when a request or nothing is selected, one after another against the active base URL, then shows a report: per-request state (passed, failed, no tests, skipped), status, time, and the failing assertion messages, plus a summary. Run again and Stop buttons; closing the dialog cancels. It does not touch the main response pane and never marks the collection dirty.
+- Owner: `ViewModels/RunnerViewModel.cs`, `RunItemViewModel.cs` (each holds a `RequestModel` snapshot taken at start); started from `MainViewModel.RunSelected`.
+- View: `Views/RunnerDialog.xaml`, opened through `IDialogService.ShowRunner`.
+
 ## Persistence and session restore
 Auto-save (600 ms debounce) of collections as JSON, flush on close, and restoring the last collection and selected request. First run seeds a "Sample API" collection.
 - Owner: `ViewModels/EditableViewModel.cs` (dirty bubbling), `MainViewModel` (Loading and saving region), `Services/CollectionStore.cs`, `Models/AppSettings.cs`.

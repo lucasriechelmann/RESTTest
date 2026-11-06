@@ -159,6 +159,15 @@
                                 <ui:SymbolIcon Symbol="FolderAdd24" />
                             </ui:Button.Icon>
                         </ui:Button>
+
+                        <ui:Button Margin="6,0,0,0"
+                                   Command="{Binding RunSelectedCommand}"
+                                   Content="Run"
+                                   ToolTip="Run every request in the selected folder, or in the whole collection, and check their tests">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="Play24" />
+                            </ui:Button.Icon>
+                        </ui:Button>
                     </StackPanel>
 
                     <TreeView Grid.Row="1"
@@ -183,6 +192,8 @@
                             <ContextMenu>
                                 <MenuItem Command="{Binding NewRequestCommand}" Header="New Request" />
                                 <MenuItem Command="{Binding NewFolderCommand}" Header="New Folder" />
+                                <Separator />
+                                <MenuItem Command="{Binding RunSelectedCommand}" Header="Run" />
                                 <Separator />
                                 <MenuItem Command="{Binding RenameSelectedCommand}" Header="Rename" InputGestureText="F2" />
                                 <MenuItem Command="{Binding DuplicateSelectedCommand}" Header="Duplicate" />
@@ -615,6 +626,111 @@
                                 </ui:Button>
                             </Grid>
                         </TabItem>
+
+                        <TabItem>
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Tests" />
+                                    <TextBlock Opacity="0.7" Text="{Binding EnabledAssertionCount, StringFormat=' ({0})'}" />
+                                </StackPanel>
+                            </TabItem.Header>
+
+                            <Grid Margin="0,10,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0"
+                                           Margin="0,0,0,8"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="Checked after every Send and every Run. Unticked rows are skipped." />
+
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding Assertions}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="170" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="150" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <CheckBox Grid.Column="0"
+                                                              Width="30"
+                                                              VerticalAlignment="Center"
+                                                              IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                              ToolTip="Run this check" />
+
+                                                    <ComboBox Grid.Column="1"
+                                                              ItemsSource="{Binding TargetOptions}"
+                                                              SelectedItem="{Binding Target, Mode=TwoWay}">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding Converter={StaticResource AssertionLabel}}" />
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+
+                                                    <!-- Header name or JSON path; collapses (and takes its gap with it) for other targets. -->
+                                                    <ui:TextBox Grid.Column="2"
+                                                                Width="170"
+                                                                Margin="8,0,0,0"
+                                                                FontFamily="{StaticResource CodeFont}"
+                                                                PlaceholderText="{Binding SelectorPlaceholder}"
+                                                                Text="{Binding Selector, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                Visibility="{Binding ShowsSelector, Converter={StaticResource BoolToVis}}" />
+
+                                                    <ComboBox Grid.Column="3"
+                                                              Margin="8,0,0,0"
+                                                              ItemsSource="{Binding OperatorOptions}"
+                                                              SelectedItem="{Binding Operator, Mode=TwoWay}">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding Converter={StaticResource AssertionLabel}}" />
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+
+                                                    <ui:TextBox Grid.Column="4"
+                                                                Margin="8,0,0,0"
+                                                                FontFamily="{StaticResource CodeFont}"
+                                                                PlaceholderText="expected value"
+                                                                Text="{Binding Expected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                Visibility="{Binding ShowsExpected, Converter={StaticResource BoolToVis}}" />
+
+                                                    <ui:Button Grid.Column="5"
+                                                               Margin="8,0,0,0"
+                                                               Padding="6"
+                                                               Command="{Binding DataContext.RemoveAssertionCommand,
+                                                                                  RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                               CommandParameter="{Binding}"
+                                                               ToolTip="Remove">
+                                                        <ui:SymbolIcon FontSize="14" Symbol="Delete24" />
+                                                    </ui:Button>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+
+                                <ui:Button Grid.Row="2"
+                                           Margin="0,8,0,0"
+                                           HorizontalAlignment="Left"
+                                           Command="{Binding AddAssertionCommand}"
+                                           Content="Add test">
+                                    <ui:Button.Icon>
+                                        <ui:SymbolIcon Symbol="Add24" />
+                                    </ui:Button.Icon>
+                                </ui:Button>
+                            </Grid>
+                        </TabItem>
                     </TabControl>
 
                     <GridSplitter Grid.Row="3"
@@ -660,6 +776,23 @@
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                Text="{Binding SizeText}" />
+
+                                    <TextBlock Margin="12,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding TestSummary}"
+                                               Visibility="{Binding HasTests, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                <Setter Property="Foreground" Value="#D9534F" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AllTestsPassed}" Value="True">
+                                                        <Setter Property="Foreground" Value="#3FA55A" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
 
                                     <TextBlock Margin="12,0,0,0"
                                                VerticalAlignment="Center"
@@ -720,6 +853,45 @@
                                                                    FontFamily="{StaticResource CodeFont}"
                                                                    FontSize="12"
                                                                    Text="{Binding Value}"
+                                                                   TextWrapping="Wrap" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Tests"
+                                         Visibility="{Binding HasTests, Converter={StaticResource BoolToVis}}">
+                                    <ScrollViewer Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding TestResults}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,6">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="24" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="0"
+                                                                   FontWeight="Bold">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                                    <Setter Property="Text" Value="✕" />
+                                                                    <Setter Property="Foreground" Value="#D9534F" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Passed}" Value="True">
+                                                                            <Setter Property="Text" Value="✓" />
+                                                                            <Setter Property="Foreground" Value="#3FA55A" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+
+                                                        <TextBlock Grid.Column="1"
+                                                                   FontFamily="{StaticResource CodeFont}"
+                                                                   FontSize="12"
+                                                                   Text="{Binding Message}"
                                                                    TextWrapping="Wrap" />
                                                     </Grid>
                                                 </DataTemplate>

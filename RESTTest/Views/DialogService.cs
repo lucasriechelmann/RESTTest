@@ -37,6 +37,15 @@ public sealed class DialogService : IDialogService
         dialog.ShowDialog();
     }
 
+    public void ShowRunner(RunnerViewModel runner)
+    {
+        var dialog = new RunnerDialog(runner) { Owner = Owner };
+        dialog.ShowDialog();
+
+        // Closing the window mid-run must not leave requests firing in the background.
+        runner.CancelCommand.Execute(null);
+    }
+
     public void CopyToClipboard(string text)
     {
         try
