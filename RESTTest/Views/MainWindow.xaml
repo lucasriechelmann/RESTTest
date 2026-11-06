@@ -401,18 +401,35 @@
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
+                                <!-- Body type, then the actions and notes that apply to it. -->
                                 <StackPanel Grid.Row="0"
                                             Margin="0,0,0,8"
                                             Orientation="Horizontal">
-                                    <ui:Button Command="{Binding FormatBodyCommand}" Content="Format JSON">
-                                        <ui:Button.Icon>
-                                            <ui:SymbolIcon Symbol="TextAlignLeft24" />
-                                        </ui:Button.Icon>
-                                    </ui:Button>
+                                    <ComboBox Width="190"
+                                              ItemsSource="{Binding BodyOptions}"
+                                              SelectedItem="{Binding BodyMode, Mode=TwoWay}"
+                                              ToolTip="How the body is encoded and which Content-Type it is sent with">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource BodyKindLabel}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
 
-                                    <ui:Button Margin="6,0,0,0"
-                                               Command="{Binding MinifyBodyCommand}"
-                                               Content="Minify" />
+                                    <StackPanel Orientation="Horizontal"
+                                                Visibility="{Binding CanFormatBody, Converter={StaticResource BoolToVis}}">
+                                        <ui:Button Margin="8,0,0,0"
+                                                   Command="{Binding FormatBodyCommand}"
+                                                   Content="Format">
+                                            <ui:Button.Icon>
+                                                <ui:SymbolIcon Symbol="TextAlignLeft24" />
+                                            </ui:Button.Icon>
+                                        </ui:Button>
+
+                                        <ui:Button Margin="6,0,0,0"
+                                                   Command="{Binding MinifyBodyCommand}"
+                                                   Content="Minify" />
+                                    </StackPanel>
 
                                     <TextBlock Margin="12,0,0,0"
                                                VerticalAlignment="Center"
@@ -437,9 +454,194 @@
                                                Visibility="{Binding SupportsBody, Converter={StaticResource InverseBoolToVis}}" />
                                 </StackPanel>
 
-                                <ctrl:JsonEditor Grid.Row="1"
-                                                 BoundText="{Binding Body, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource JsonEditorStyle}" />
+                                <Grid Grid.Row="1">
+                                    <!-- JSON, and Text / XML: same text, two editors that differ only in colouring. -->
+                                    <ctrl:JsonEditor BoundText="{Binding Body, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource JsonEditorStyle}"
+                                                     Visibility="{Binding IsJsonBody, Converter={StaticResource BoolToVis}}" />
+
+                                    <ctrl:JsonEditor BoundText="{Binding Body, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     HighlightJson="False"
+                                                     Style="{StaticResource JsonEditorStyle}"
+                                                     Visibility="{Binding IsPlainTextBody, Converter={StaticResource BoolToVis}}" />
+
+                                    <!-- Form (urlencoded) -->
+                                    <Grid Visibility="{Binding IsFormBody, Converter={StaticResource BoolToVis}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="1.4*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Width="30" Text="" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource SectionLabelStyle}" Text="Field" />
+                                            <TextBlock Grid.Column="2" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Value" />
+                                            <TextBlock Grid.Column="3" Width="40" Text="" />
+                                        </Grid>
+
+                                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding FormFields}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,0,0,6">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="1.4*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <CheckBox Grid.Column="0"
+                                                                      Width="30"
+                                                                      VerticalAlignment="Center"
+                                                                      IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                                      ToolTip="Send this field" />
+
+                                                            <ui:TextBox Grid.Column="1"
+                                                                        FontFamily="{StaticResource CodeFont}"
+                                                                        PlaceholderText="name"
+                                                                        Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                                            <ui:TextBox Grid.Column="2"
+                                                                        Margin="8,0,0,0"
+                                                                        FontFamily="{StaticResource CodeFont}"
+                                                                        PlaceholderText="value"
+                                                                        Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                                            <ui:Button Grid.Column="3"
+                                                                       Margin="8,0,0,0"
+                                                                       Padding="6"
+                                                                       Command="{Binding DataContext.RemoveFormFieldCommand,
+                                                                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                       CommandParameter="{Binding}"
+                                                                       ToolTip="Remove">
+                                                                <ui:SymbolIcon FontSize="14" Symbol="Delete24" />
+                                                            </ui:Button>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+
+                                        <ui:Button Grid.Row="2"
+                                                   Margin="0,8,0,0"
+                                                   HorizontalAlignment="Left"
+                                                   Command="{Binding AddFormFieldCommand}"
+                                                   Content="Add field">
+                                            <ui:Button.Icon>
+                                                <ui:SymbolIcon Symbol="Add24" />
+                                            </ui:Button.Icon>
+                                        </ui:Button>
+                                    </Grid>
+
+                                    <!-- Form (multipart): text fields and files -->
+                                    <Grid Visibility="{Binding IsMultipartBody, Converter={StaticResource BoolToVis}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="1.6*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Width="30" Text="" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource SectionLabelStyle}" Text="Field" />
+                                            <TextBlock Grid.Column="2" Width="70" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Type" />
+                                            <TextBlock Grid.Column="3" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Value or file path" />
+                                            <TextBlock Grid.Column="4" Width="130" Text="" />
+                                        </Grid>
+
+                                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding MultipartParts}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,0,0,6">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="1.6*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <CheckBox Grid.Column="0"
+                                                                      Width="30"
+                                                                      VerticalAlignment="Center"
+                                                                      IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                                      ToolTip="Send this part" />
+
+                                                            <ui:TextBox Grid.Column="1"
+                                                                        FontFamily="{StaticResource CodeFont}"
+                                                                        PlaceholderText="name"
+                                                                        Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                                            <CheckBox Grid.Column="2"
+                                                                      Width="70"
+                                                                      Margin="8,0,0,0"
+                                                                      VerticalAlignment="Center"
+                                                                      Content="File"
+                                                                      IsChecked="{Binding IsFile, Mode=TwoWay}"
+                                                                      ToolTip="Upload a file instead of sending text" />
+
+                                                            <ui:TextBox Grid.Column="3"
+                                                                        Margin="8,0,0,0"
+                                                                        FontFamily="{StaticResource CodeFont}"
+                                                                        PlaceholderText="value"
+                                                                        Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                                            <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                                                <ui:Button Margin="8,0,0,0"
+                                                                           Command="{Binding DataContext.PickMultipartFileCommand,
+                                                                                              RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                                                                           CommandParameter="{Binding}"
+                                                                           Content="Browse"
+                                                                           Visibility="{Binding IsFile, Converter={StaticResource BoolToVis}}" />
+
+                                                                <ui:Button Margin="8,0,0,0"
+                                                                           Padding="6"
+                                                                           Command="{Binding DataContext.RemoveMultipartPartCommand,
+                                                                                              RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                           CommandParameter="{Binding}"
+                                                                           ToolTip="Remove">
+                                                                    <ui:SymbolIcon FontSize="14" Symbol="Delete24" />
+                                                                </ui:Button>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+
+                                        <ui:Button Grid.Row="2"
+                                                   Margin="0,8,0,0"
+                                                   HorizontalAlignment="Left"
+                                                   Command="{Binding AddMultipartPartCommand}"
+                                                   Content="Add part">
+                                            <ui:Button.Icon>
+                                                <ui:SymbolIcon Symbol="Add24" />
+                                            </ui:Button.Icon>
+                                        </ui:Button>
+                                    </Grid>
+
+                                    <TextBlock HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="This request has no body."
+                                               Visibility="{Binding IsNoBody, Converter={StaticResource BoolToVis}}" />
+                                </Grid>
                             </Grid>
                         </TabItem>
 

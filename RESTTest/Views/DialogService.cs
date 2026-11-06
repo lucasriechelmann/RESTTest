@@ -37,6 +37,12 @@ public sealed class DialogService : IDialogService
         dialog.ShowDialog();
     }
 
+    public string? PickFile(string title)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = title, CheckFileExists = true };
+        return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
+    }
+
     public void ShowHistory(HistoryViewModel history)
     {
         var dialog = new HistoryDialog(history) { Owner = Owner };

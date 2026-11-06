@@ -13,7 +13,9 @@ Folders and requests in a tree with inline rename (F2 / on create), duplicate (d
 - View: `Behaviors/` (`TreeViewDragDrop`, `TreeViewSelection`, `FocusBehavior`), sidebar section of `Views/MainWindow.xaml`.
 
 ## Building a request
-Method, relative path, query parameters and headers (enable/disable per row, tab headers show the active count), JSON body editor with Format and Minify and a warning when the method will not send a body, auth (none or bearer token). A live "resolved URL" preview with copy.
+Method, relative path, query parameters and headers (enable/disable per row, tab headers show the active count), auth (none or bearer token), and a body with a type picker: JSON, Text, XML, Form (urlencoded), Form (multipart, with file uploads via a Browse button) or No body. JSON and XML have Format and Minify; Text and XML use the uncoloured editor; a warning shows when the method will not send a body. Switching type keeps the typed text, so switching back loses nothing. A live "resolved URL" preview with copy.
+- Body: `RequestViewModel.BodyMode` (`BodyKind`), `FormFields` (`KeyValueViewModel`), `MultipartParts` (`MultipartPartViewModel`); XML helpers in `Services/XmlText.cs`; Content-Type guesses for uploads in `Services/MimeTypes.cs`. The file picker is `MainViewModel.PickMultipartFile` via `IDialogService.PickFile`.
+- What goes on the wire: `Services/HttpRequestSender.BuildContent`.
 - Owner: `ViewModels/RequestViewModel.cs`, `KeyValueViewModel.cs`.
 - URL composition: `Services/HttpRequestSender.BuildUrl` (an absolute http(s) path overrides the base URL).
 - JSON helpers: `Services/JsonText.cs`. Editor: `Controls/JsonEditor.cs`, `BracketHighlightRenderer.cs`, `Services/JsonBracketMatcher.cs`, syntax rules in `Resources/Json.xshd`.
@@ -50,7 +52,7 @@ Ctrl+F find panel in the JSON editors with amber match highlighting. The panel k
 - Owner: `Controls/JsonEditor.cs`.
 
 ## Not built (do not assume these exist)
-Import from Postman/Insomnia, variables beyond the base URL, saving responses to disk, non-JSON body types (form, multipart, XML), response diffing, auth types beyond bearer, cookies.
+Import from Postman/Insomnia, variables beyond the base URL, saving responses to disk, binary or GraphQL body types, XML syntax colouring, response diffing, auth types beyond bearer, cookies.
 
 <!-- manual:start -->
 <!-- manual:end -->

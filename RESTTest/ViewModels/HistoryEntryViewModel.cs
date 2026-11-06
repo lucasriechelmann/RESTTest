@@ -63,9 +63,13 @@ public sealed class HistoryEntryViewModel : ObservableObject
 
     public string TestSummary => HasTests ? $"{Model.TestsPassed}/{Model.TestsTotal} tests passed" : string.Empty;
 
-    public bool HasRequestBody => !string.IsNullOrWhiteSpace(Model.Request.Body);
+    /// <summary>False for text, XML and form bodies, which the viewer should not colour as JSON.</summary>
+    public bool IsJsonRequestBody => Model.Request.BodyKind == BodyKind.Json;
 
-    public string RequestBody => Model.Request.Body;
+    public bool HasRequestBody => !string.IsNullOrWhiteSpace(RequestBody);
+
+    /// <summary>What was sent as the body, whatever its kind: text as typed, form rows as key=value lines.</summary>
+    public string RequestBody => RequestBodyPreview.Describe(Model.Request);
 
     /// <summary>
     /// Formatted on first use, not on load: up to a hundred bodies are kept, and almost all of
@@ -91,6 +95,12 @@ public sealed class HistoryEntryViewModel : ObservableObject
         get
         {
             var parts = new List<string>();
+
+            var body = RequestBodyPreview.Label(Model.Request);
+            if (body.Length > 0)
+            {
+                parts.Add(body);
+            }
 
             var headers = Model.Request.Headers.Count(h => h.Enabled && !string.IsNullOrWhiteSpace(h.Key));
             if (headers > 0)

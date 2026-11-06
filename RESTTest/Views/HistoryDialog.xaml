@@ -268,6 +268,7 @@
 
                                 <ctrl:JsonEditor Grid.Row="1"
                                                  BoundText="{Binding RequestBody, Mode=OneWay}"
+                                                 HighlightJson="{Binding IsJsonRequestBody, Mode=OneWay}"
                                                  IsReadOnly="True"
                                                  Style="{StaticResource JsonEditorStyle}"
                                                  Visibility="{Binding HasRequestBody, Converter={StaticResource BoolToVis}}" />

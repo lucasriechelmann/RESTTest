@@ -17,6 +17,7 @@
             <conv:StatusBrushConverter x:Key="StatusBrush" />
             <conv:AuthKindLabelConverter x:Key="AuthKindLabel" />
             <conv:AssertionLabelConverter x:Key="AssertionLabel" />
+            <conv:BodyKindLabelConverter x:Key="BodyKindLabel" />
             <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
             <conv:StringNotEmptyToVisibilityConverter x:Key="StringToVis" />
             <BooleanToVisibilityConverter x:Key="BoolToVis" />

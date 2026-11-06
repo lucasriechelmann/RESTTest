@@ -27,6 +27,9 @@ public interface IDialogService
     /// </summary>
     void ShowRunner(RunnerViewModel runner);
 
+    /// <summary>Lets the user choose a file to upload. Returns its full path, or null when cancelled.</summary>
+    string? PickFile(string title);
+
     /// <summary>Opens the request history. Blocks until the dialog is closed.</summary>
     void ShowHistory(HistoryViewModel history);
 

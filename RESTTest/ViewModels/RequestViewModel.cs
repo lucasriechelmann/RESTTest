@@ -19,6 +19,10 @@ public partial class RequestViewModel : EditableViewModel
     public static IReadOnlyList<AuthKind> AuthKinds { get; } =
         [AuthKind.None, AuthKind.BearerToken];
 
+    /// <summary>Body types in the order the picker shows them.</summary>
+    public static IReadOnlyList<BodyKind> BodyKinds { get; } =
+        [BodyKind.Json, BodyKind.Text, BodyKind.Xml, BodyKind.FormUrlEncoded, BodyKind.Multipart, BodyKind.None];
+
     /// <summary>Methods for which the body is actually transmitted.</summary>
     private static readonly HashSet<string> BodyCapableMethods = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -30,6 +34,10 @@ public partial class RequestViewModel : EditableViewModel
 
     [ObservableProperty]
     private string _path = string.Empty;
+
+    /// <summary>Named BodyMode, not BodyKind: a property with its own type's name reads as a typo.</summary>
+    [ObservableProperty]
+    private BodyKind _bodyMode = BodyKind.Json;
 
     [ObservableProperty]
     private string _body = string.Empty;
@@ -56,6 +64,7 @@ public partial class RequestViewModel : EditableViewModel
     {
         _method = string.IsNullOrWhiteSpace(model.Method) ? "GET" : model.Method;
         _path = model.Path;
+        _bodyMode = model.BodyKind;
         _body = model.Body;
         _auth = model.Auth;
         _bearerToken = model.BearerToken;
@@ -70,6 +79,16 @@ public partial class RequestViewModel : EditableViewModel
             Headers.Add(new KeyValueViewModel(header));
         }
 
+        foreach (var field in model.FormFields ?? [])
+        {
+            FormFields.Add(new KeyValueViewModel(field));
+        }
+
+        foreach (var part in model.MultipartParts ?? [])
+        {
+            MultipartParts.Add(new MultipartPartViewModel(part));
+        }
+
         foreach (var assertion in model.Assertions)
         {
             Assertions.Add(new AssertionViewModel(assertion));
@@ -82,6 +101,8 @@ public partial class RequestViewModel : EditableViewModel
     {
         TrackChildren(QueryParams);
         TrackChildren(Headers);
+        TrackChildren(FormFields);
+        TrackChildren(MultipartParts);
         TrackChildren(Assertions);
 
         // The tab headers show how many rows are actually in play. Dirty already fires for any
@@ -98,7 +119,31 @@ public partial class RequestViewModel : EditableViewModel
 
     public ObservableCollection<KeyValueViewModel> Headers { get; } = [];
 
+    public ObservableCollection<KeyValueViewModel> FormFields { get; } = [];
+
+    public ObservableCollection<MultipartPartViewModel> MultipartParts { get; } = [];
+
     public ObservableCollection<AssertionViewModel> Assertions { get; } = [];
+
+    public IReadOnlyList<BodyKind> BodyOptions => BodyKinds;
+
+    /// <summary>
+    /// Which body editor the Body tab shows. Plain bools so the XAML needs no converters, and
+    /// each is raised from <see cref="OnBodyModeChanged"/>.
+    /// </summary>
+    public bool IsJsonBody => BodyMode == BodyKind.Json;
+
+    /// <summary>Text and XML share one editor: both are shown as plain, uncoloured text.</summary>
+    public bool IsPlainTextBody => BodyMode is BodyKind.Text or BodyKind.Xml;
+
+    public bool IsFormBody => BodyMode == BodyKind.FormUrlEncoded;
+
+    public bool IsMultipartBody => BodyMode == BodyKind.Multipart;
+
+    public bool IsNoBody => BodyMode == BodyKind.None;
+
+    /// <summary>Format and Minify exist for the two structured text kinds.</summary>
+    public bool CanFormatBody => BodyMode is BodyKind.Json or BodyKind.Xml;
 
     /// <summary>Instance views of the option lists, so XAML can bind them without x:Static.</summary>
     public IReadOnlyList<string> MethodOptions => Methods;
@@ -121,7 +166,10 @@ public partial class RequestViewModel : EditableViewModel
     {
         Method = Method,
         Path = Path,
+        BodyKind = BodyMode,
         Body = Body,
+        FormFields = [.. FormFields.Select(f => f.ToModel())],
+        MultipartParts = [.. MultipartParts.Select(p => p.ToModel())],
         Auth = Auth,
         BearerToken = BearerToken,
         QueryParams = [.. QueryParams.Select(p => p.ToModel())],
@@ -154,6 +202,30 @@ public partial class RequestViewModel : EditableViewModel
     }
 
     [RelayCommand]
+    private void AddFormField() => FormFields.Add(new KeyValueViewModel());
+
+    [RelayCommand]
+    private void RemoveFormField(KeyValueViewModel? field)
+    {
+        if (field is not null)
+        {
+            FormFields.Remove(field);
+        }
+    }
+
+    [RelayCommand]
+    private void AddMultipartPart() => MultipartParts.Add(new MultipartPartViewModel());
+
+    [RelayCommand]
+    private void RemoveMultipartPart(MultipartPartViewModel? part)
+    {
+        if (part is not null)
+        {
+            MultipartParts.Remove(part);
+        }
+    }
+
+    [RelayCommand]
     private void AddAssertion() => Assertions.Add(new AssertionViewModel());
 
     [RelayCommand]
@@ -167,29 +239,32 @@ public partial class RequestViewModel : EditableViewModel
 
     /// <summary>Re-indents the body, or reports where the JSON is malformed.</summary>
     [RelayCommand]
-    private void FormatBody()
+    private void FormatBody() => TransformBody(minify: false, done: "Formatted.");
+
+    [RelayCommand]
+    private void MinifyBody() => TransformBody(minify: true, done: "Minified.");
+
+    /// <summary>Re-writes the body as JSON or XML depending on the body type, or reports why it cannot.</summary>
+    private void TransformBody(bool minify, string done)
     {
-        if (JsonText.TryFormat(Body, out var formatted, out var error))
+        bool ok;
+        string text;
+        string? error;
+
+        if (BodyMode == BodyKind.Xml)
         {
-            Body = formatted;
-            BodyStatusIsError = false;
-            BodyStatus = "Formatted.";
+            ok = minify ? XmlText.TryMinify(Body, out text, out error) : XmlText.TryFormat(Body, out text, out error);
         }
         else
         {
-            BodyStatusIsError = true;
-            BodyStatus = error;
+            ok = minify ? JsonText.TryMinify(Body, out text, out error) : JsonText.TryFormat(Body, out text, out error);
         }
-    }
 
-    [RelayCommand]
-    private void MinifyBody()
-    {
-        if (JsonText.TryMinify(Body, out var minified, out var error))
+        if (ok)
         {
-            Body = minified;
+            Body = text;
             BodyStatusIsError = false;
-            BodyStatus = "Minified.";
+            BodyStatus = done;
         }
         else
         {
@@ -203,9 +278,29 @@ public partial class RequestViewModel : EditableViewModel
             or nameof(BodyStatusIsError)
             or nameof(EnabledQueryParamCount)
             or nameof(EnabledHeaderCount)
-            or nameof(EnabledAssertionCount);
+            or nameof(EnabledAssertionCount)
+            or nameof(IsJsonBody)
+            or nameof(IsPlainTextBody)
+            or nameof(IsFormBody)
+            or nameof(IsMultipartBody)
+            or nameof(IsNoBody)
+            or nameof(CanFormatBody);
 
     partial void OnMethodChanged(string value) => OnPropertyChanged(nameof(SupportsBody));
+
+    partial void OnBodyModeChanged(BodyKind value)
+    {
+        OnPropertyChanged(nameof(IsJsonBody));
+        OnPropertyChanged(nameof(IsPlainTextBody));
+        OnPropertyChanged(nameof(IsFormBody));
+        OnPropertyChanged(nameof(IsMultipartBody));
+        OnPropertyChanged(nameof(IsNoBody));
+        OnPropertyChanged(nameof(CanFormatBody));
+
+        // A "Formatted." note about JSON means nothing once the body is something else.
+        BodyStatus = null;
+        BodyStatusIsError = false;
+    }
 
     partial void OnAuthChanged(AuthKind value) => OnPropertyChanged(nameof(IsBearerAuth));
 

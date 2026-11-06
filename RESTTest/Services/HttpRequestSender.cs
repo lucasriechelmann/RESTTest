@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -189,12 +190,102 @@ public sealed class HttpRequestSender : IHttpRequestSender
 
     private static void ApplyBody(HttpRequestMessage message, RequestModel request, string method)
     {
-        if (string.IsNullOrWhiteSpace(request.Body) || !BodyCapableMethods.Contains(method))
+        message.Content = BuildContent(request, method);
+    }
+
+    /// <summary>
+    /// The body as it goes on the wire, or null when nothing is sent: a method that carries no
+    /// body, <see cref="BodyKind.None"/>, or a body with nothing in it. This is the single place
+    /// that decides which body kinds exist and how each is encoded.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">A multipart file part points at a file that is gone.</exception>
+    public static HttpContent? BuildContent(RequestModel request, string method)
+    {
+        if (!BodyCapableMethods.Contains(method))
         {
-            return;
+            return null;
         }
 
-        message.Content = new StringContent(request.Body, Encoding.UTF8, "application/json");
+        switch (request.BodyKind)
+        {
+            case BodyKind.Json:
+                return TextContent(request.Body, "application/json");
+
+            case BodyKind.Text:
+                return TextContent(request.Body, "text/plain");
+
+            case BodyKind.Xml:
+                return TextContent(request.Body, "application/xml");
+
+            case BodyKind.FormUrlEncoded:
+                var fields = (request.FormFields ?? [])
+                    .Where(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key))
+                    .Select(f => new KeyValuePair<string, string>(f.Key.Trim(), f.Value ?? string.Empty))
+                    .ToList();
+
+                return fields.Count == 0 ? null : new FormUrlEncodedContent(fields);
+
+            case BodyKind.Multipart:
+                return BuildMultipart(request.MultipartParts ?? []);
+
+            default:
+                return null;
+        }
+    }
+
+    private static StringContent? TextContent(string? text, string mediaType) =>
+        string.IsNullOrWhiteSpace(text) ? null : new StringContent(text, Encoding.UTF8, mediaType);
+
+    private static MultipartFormDataContent? BuildMultipart(IEnumerable<MultipartPartModel> parts)
+    {
+        var active = parts.Where(p => p.Enabled && !string.IsNullOrWhiteSpace(p.Key)).ToList();
+        if (active.Count == 0)
+        {
+            return null;
+        }
+
+        var content = new MultipartFormDataContent();
+
+        try
+        {
+            foreach (var part in active)
+            {
+                var name = part.Key.Trim();
+
+                if (!part.IsFile)
+                {
+                    var text = new StringContent(part.Value ?? string.Empty, Encoding.UTF8);
+
+                    // Browsers and cURL send a plain field with no Content-Type of its own. A typed
+                    // part makes some servers treat it as a file or a structured part, not a field.
+                    text.Headers.ContentType = null;
+                    content.Add(text, name);
+                    continue;
+                }
+
+                var path = (part.Value ?? string.Empty).Trim();
+                if (!File.Exists(path))
+                {
+                    throw new FileNotFoundException(
+                        $"The file for multipart field '{name}' was not found: {(path.Length == 0 ? "(no file chosen)" : path)}",
+                        path);
+                }
+
+                // Opened, not read: the stream is consumed when the request is sent, so a large
+                // upload never sits in memory. The content owns it and closes it on dispose.
+                var file = new StreamContent(File.OpenRead(path));
+                file.Headers.ContentType = new MediaTypeHeaderValue(MimeTypes.For(path));
+                content.Add(file, name, Path.GetFileName(path));
+            }
+        }
+        catch
+        {
+            // Dispose what was opened so far, or a missing second file would leak the first one's handle.
+            content.Dispose();
+            throw;
+        }
+
+        return content;
     }
 
     private static void ApplyAuthentication(HttpRequestMessage message, RequestModel request)

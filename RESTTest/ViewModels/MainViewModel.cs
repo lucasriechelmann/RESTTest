@@ -494,6 +494,30 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     private void ShowHistory() => _dialogs.ShowHistory(History);
 
     /// <summary>
+    /// Fills a multipart file row from the file picker. Here and not on the row because opening a
+    /// dialog is this layer's job (<see cref="IDialogService"/>); a row only holds its own state.
+    /// </summary>
+    [RelayCommand]
+    private void PickMultipartFile(MultipartPartViewModel? part)
+    {
+        if (part is null)
+        {
+            return;
+        }
+
+        if (_dialogs.PickFile("Choose a file to upload") is { } path)
+        {
+            part.Value = path;
+
+            // A row without a name is skipped when sending, so give a freshly picked file a default one.
+            if (string.IsNullOrWhiteSpace(part.Key))
+            {
+                part.Key = "file";
+            }
+        }
+    }
+
+    /// <summary>
     /// Copies a history entry's request into the open collection, next to the selection. Returns
     /// the message the history dialog shows.
     /// </summary>

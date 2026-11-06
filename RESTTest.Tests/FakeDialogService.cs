@@ -23,6 +23,11 @@ internal sealed class FakeDialogService : IDialogService
     {
     }
 
+    /// <summary>What <see cref="PickFile"/> returns; null means the user cancelled.</summary>
+    public string? PickFileResult { get; set; }
+
+    public string? PickFile(string title) => PickFileResult;
+
     public void ShowEnvironments(CollectionViewModel collection)
     {
     }

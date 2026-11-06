@@ -81,6 +81,30 @@ public class JsonEditor : TextEditor
     /// <summary>The find bar, exposed so the view can restyle it for the current theme.</summary>
     public SearchPanel SearchPanel { get; }
 
+    public static readonly DependencyProperty HighlightJsonProperty = DependencyProperty.Register(
+        nameof(HighlightJson),
+        typeof(bool),
+        typeof(JsonEditor),
+        new PropertyMetadata(true, OnHighlightJsonChanged));
+
+    /// <summary>
+    /// Colours the text as JSON (the default). Turn it off to show plain text or XML in the same
+    /// editor without JSON colouring, which would mark ordinary words as errors or keywords.
+    /// </summary>
+    public bool HighlightJson
+    {
+        get => (bool)GetValue(HighlightJsonProperty);
+        set => SetValue(HighlightJsonProperty, value);
+    }
+
+    private static void OnHighlightJsonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is JsonEditor editor)
+        {
+            editor.SyntaxHighlighting = (bool)e.NewValue ? JsonHighlighting.Value : null;
+        }
+    }
+
     /// <summary>The document text, two-way bindable.</summary>
     public string BoundText
     {
