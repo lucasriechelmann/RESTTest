@@ -19,14 +19,25 @@ internal sealed class FakeDialogService : IDialogService
 
     public string? Prompt(string title, string label, string initialValue = "", string placeholder = "", bool multiline = false) => null;
 
-    public void ShowMessage(string title, string message)
-    {
-    }
+    public void ShowMessage(string title, string message) => Messages.Add(message);
 
     /// <summary>What <see cref="PickFile"/> returns; null means the user cancelled.</summary>
     public string? PickFileResult { get; set; }
 
     public string? PickFile(string title, string? filter = null) => PickFileResult;
+
+    /// <summary>What <see cref="PickSavePath"/> returns; null means the user cancelled.</summary>
+    public string? SavePathResult { get; set; }
+
+    public List<string> SaveSuggestions { get; } = [];
+
+    public List<string> Messages { get; } = [];
+
+    public string? PickSavePath(string title, string suggestedName, string? filter = null)
+    {
+        SaveSuggestions.Add(suggestedName);
+        return SavePathResult;
+    }
 
     public void ShowEnvironments(CollectionViewModel collection)
     {

@@ -66,7 +66,8 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         _dialogs = dialogs;
         _historyStore = historyStore;
 
-        History = new HistoryViewModel(dialogs, historyStore.Load());
+        Response = new ResponseViewModel(dialogs);
+        History =new HistoryViewModel(dialogs, historyStore.Load());
         History.Changed += (_, _) => QueueHistorySave();
         History.SaveAsRequestHandler = SaveHistoryEntryAsRequest;
 
@@ -79,7 +80,7 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
 
     public ObservableCollection<CollectionViewModel> Collections { get; } = [];
 
-    public ResponseViewModel Response { get; } = new();
+    public ResponseViewModel Response { get; }
 
     public HistoryViewModel History { get; }
 
@@ -727,6 +728,12 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
     [RelayCommand]
     private void CopyResponseBody()
     {
+        if (Response.IsBinary)
+        {
+            StatusMessage = "This response is binary, so there is no text to copy. Use Save instead.";
+            return;
+        }
+
         if (Response.HasResponse)
         {
             _dialogs.CopyToClipboard(Response.PrettyBody);

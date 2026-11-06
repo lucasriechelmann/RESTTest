@@ -157,8 +157,11 @@ public sealed class HttpRequestSender : IHttpRequestSender
                 .SendAsync(message, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .ConfigureAwait(false);
 
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
             stopwatch.Stop();
+
+            var contentType = response.Content.Headers.ContentType?.ToString() ?? string.Empty;
+            var body = ResponseBody.Decode(bytes, contentType, out var isBinary);
 
             return new HttpExchangeResult
             {
@@ -168,9 +171,11 @@ public sealed class HttpRequestSender : IHttpRequestSender
                 StatusCode = (int)response.StatusCode,
                 ReasonPhrase = response.ReasonPhrase ?? response.StatusCode.ToString(),
                 Body = body,
+                BodyBytes = bytes,
+                IsBinary = isBinary,
                 ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
-                ContentLength = response.Content.Headers.ContentLength ?? Encoding.UTF8.GetByteCount(body),
-                ContentType = response.Content.Headers.ContentType?.ToString() ?? string.Empty,
+                ContentLength = response.Content.Headers.ContentLength ?? bytes.Length,
+                ContentType = contentType,
                 ResponseHeaders = CollectHeaders(response),
             };
         }

@@ -48,6 +48,17 @@ public sealed class DialogService : IDialogService
         return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
     }
 
+    public string? PickSavePath(string title, string suggestedName, string? filter = null)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Title = title, FileName = suggestedName, OverwritePrompt = true };
+        if (filter is not null)
+        {
+            dialog.Filter = filter;
+        }
+
+        return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
+    }
+
     public void ShowHistory(HistoryViewModel history)
     {
         var dialog = new HistoryDialog(history) { Owner = Owner };

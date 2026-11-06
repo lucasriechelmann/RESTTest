@@ -50,6 +50,11 @@ The **Import** button in the sidebar toolbar (or the tree context menu, "Import 
 - **What does not, and is reported.** Scripts, OAuth/other auth, binary file bodies, cookie parameters, path parameters like `{id}` (left in the path), and `{{placeholders}}` with no value in the file (left as typed). A notes dialog lists each loss once.
 - Owners: `Services/Importing/` (`CollectionImporter` detects the format; `PostmanImporter`, `InsomniaImporter`, `OpenApiImporter`; shared `BaseUrlGrouper`, `PlaceholderResolver`), `MainViewModel.ImportCollection`.
 
+## Binary responses and saving a response
+A response body is read as raw bytes. `ResponseBody` decides text or binary: a known text type (text/*, JSON, XML, JavaScript, HTML, CSV...) is text; a known binary type (image, audio, video, font, PDF, zip, octet-stream, vnd.*) is binary; an unknown or missing type is sniffed (a NUL byte or invalid UTF-8 means binary). Text is decoded with the declared charset (a byte-order mark wins). A binary body is not shown as text: the Preview tab shows a notice with its size and type, and Copy explains there is nothing to copy.
+The **Save** button (disk icon, left of Copy, in the response header) writes the body to a file **byte for byte** via the save dialog. The proposed name is the server's `Content-Disposition` filename (including RFC 5987 `filename*`, with any directory part and illegal characters removed), else the last URL segment, else `response` plus an extension from the content type (`.bin` for unknown binary, `.txt` for unknown text). A note under the status row says where it was saved; a failed write is explained in a dialog. Nothing can be saved for an error, an empty body or no response.
+- Owners: `Services/ResponseBody.cs`, `Services/ResponseFileName.cs`, `Services/MimeTypes.ExtensionFor`, `ViewModels/ResponseViewModel` (`SaveToFileCommand`), `IDialogService.PickSavePath`. History stores text only, so a binary response appears there with an empty body.
+
 ## Request history
 Every Send is recorded (not user-cancelled ones, not collection runs): the request as sent, the resolved URL, status, timing, size, headers, the response body and the test result. The History button (top bar, Ctrl+H) opens a dialog: entries newest first on the left; on the right the response, headers and request body. "Save as request" copies the stored request into the open collection next to the selection; Delete and Clear all (confirmed) remove entries. Global across collections, capped at 100 entries, response bodies cut at 100,000 characters (flagged in the dialog).
 - Owner: `ViewModels/HistoryViewModel.cs` (list, record, commands), `HistoryEntryViewModel.cs` (read-only row); recording, saving and "Save as request" are wired in `MainViewModel`.
@@ -60,12 +65,15 @@ Every Send is recorded (not user-cancelled ones, not collection runs): the reque
 Auto-save (600 ms debounce) of collections as JSON, flush on close, and restoring the last collection and selected request. First run seeds a "Sample API" collection.
 - Owner: `ViewModels/EditableViewModel.cs` (dirty bubbling), `MainViewModel` (Loading and saving region), `Services/CollectionStore.cs`, `Models/AppSettings.cs`.
 
+## App icon
+The icon (two opposing arrows, request out and response back, on a blue tile) is `RESTTest/Assets/app.ico` (16 to 256 px, PNG-compressed), used as the exe icon (`ApplicationIcon` in the csproj), the window icon and the title bar icon. `app.png` is the 256 px source image. It was drawn by a one-off script, so to change it edit the PNG/ICO directly or redraw it; there is no generator in the repo.
+
 ## Search in editors
 Ctrl+F find panel in the JSON editors with amber match highlighting. The panel keeps AvalonEdit's light styling on purpose.
 - Owner: `Controls/JsonEditor.cs`.
 
 ## Not built (do not assume these exist)
-YAML import, Postman environment files, variables beyond the base URL, saving responses to disk, binary or GraphQL body types, XML syntax colouring, response diffing, OAuth and other auth types beyond bearer, Basic and API key, cookies.
+YAML import, Postman environment files, variables beyond the base URL, binary request bodies (sending a file as the whole body), a GraphQL editor, XML syntax colouring, response diffing, OAuth and other auth types beyond bearer, Basic and API key, cookies.
 
 <!-- manual:start -->
 <!-- manual:end -->

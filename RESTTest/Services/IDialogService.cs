@@ -36,6 +36,12 @@ public interface IDialogService
     /// </summary>
     string? PickFile(string title, string? filter = null);
 
+    /// <summary>
+    /// Asks where to save a file, proposing <paramref name="suggestedName"/>. Returns the chosen full
+    /// path, or null when cancelled. Overwriting an existing file is confirmed by the dialog itself.
+    /// </summary>
+    string? PickSavePath(string title, string suggestedName, string? filter = null);
+
     /// <summary>Opens the request history. Blocks until the dialog is closed.</summary>
     void ShowHistory(HistoryViewModel history);
 

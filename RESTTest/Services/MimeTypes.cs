@@ -30,6 +30,35 @@ public static class MimeTypes
         [".mp4"] = "video/mp4",
     };
 
+    /// <summary>The extension to give a saved response of this type, or null when there is no good guess.</summary>
+    public static string? ExtensionFor(string? contentType)
+    {
+        var media = (contentType ?? string.Empty).Split(';')[0].Trim().ToLowerInvariant();
+
+        if (media.Length == 0)
+        {
+            return null;
+        }
+
+        // Several extensions map to one type (".jpg", ".jpeg"): the first one listed wins.
+        foreach (var (extension, type) in ByExtension)
+        {
+            if (type == media)
+            {
+                return extension;
+            }
+        }
+
+        return media switch
+        {
+            "text/xml" => ".xml",
+            "application/javascript" => ".js",
+            _ when media.EndsWith("+json", StringComparison.Ordinal) => ".json",
+            _ when media.EndsWith("+xml", StringComparison.Ordinal) => ".xml",
+            _ => null,
+        };
+    }
+
     public const string Fallback = "application/octet-stream";
 
     public static string For(string path) =>

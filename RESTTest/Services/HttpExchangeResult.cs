@@ -16,7 +16,14 @@ public sealed record HttpExchangeResult
 
     public string ReasonPhrase { get; init; } = string.Empty;
 
+    /// <summary>The body as text. Empty for binary content, which is only available as <see cref="BodyBytes"/>.</summary>
     public string Body { get; init; } = string.Empty;
+
+    /// <summary>The body exactly as received (after transfer decompression), for saving to a file.</summary>
+    public byte[] BodyBytes { get; init; } = [];
+
+    /// <summary>True when the body is not text (an image, a PDF...), so <see cref="Body"/> is empty.</summary>
+    public bool IsBinary { get; init; }
 
     public long ElapsedMilliseconds { get; init; }
 
