@@ -10,6 +10,8 @@ Request chaining exists **without** text templating (decided 2026-11-23, "option
 |---|---|
 | `RESTTest/` | The WPF app (`net10.0-windows`, WinExe). Models, Services, ViewModels, Views, Behaviors, Controls, Converters. |
 | `RESTTest.Tests/` | xUnit tests for models, ViewModels, store, URL building, JSON helpers. References the app project. |
+| `build/` | Release tooling, not a project: `release.ps1` (tests, self-contained win-x64 publish, portable zip, Inno Setup installer, SHA-256 sums into `artifacts/<version>/`, which is git-ignored) and `installer.iss`. |
+| `docs/` | The GitHub Pages site (static `index.html` + `style.css`, `.nojekyll`), served from `main` `/docs` at https://lucasriechelmann.github.io/RESTTest/. |
 
 Solution file: `RESTTest.slnx`. Packages: CommunityToolkit.Mvvm (source-generated properties/commands), WPF-UI (Fluent theme, Mica window), AvalonEdit (JSON editor).
 
@@ -19,6 +21,8 @@ Build and test:
 dotnet build RESTTest.slnx
 dotnet test RESTTest.Tests
 ```
+
+Release: bump `<Version>` in `RESTTest/RESTTest.csproj` (the only place the number lives), run `pwsh build/release.ps1`, tag `v<Version>`, and attach the installer, zip and `SHA256SUMS.txt` to a GitHub release. Never change the installer's `AppId`: Windows uses it to recognise upgrades.
 
 ## Standing rules
 

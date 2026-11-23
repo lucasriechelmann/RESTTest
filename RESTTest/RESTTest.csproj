@@ -8,6 +8,17 @@
     <UseWPF>true</UseWPF>
     <!-- The exe's own icon (Explorer, taskbar, Alt+Tab). -->
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+
+    <!--
+      Release identity. The version is the one place a release number lives: build/release.ps1
+      reads it from here for the installer and file names, and the git tag is v$(Version).
+    -->
+    <Version>1.0.0</Version>
+    <Product>RESTTest</Product>
+    <AssemblyTitle>RESTTest</AssemblyTitle>
+    <Description>A no-login REST client for Windows with collection-wide base URLs.</Description>
+    <Authors>Lucas Riechelmann Ramos</Authors>
+    <Copyright>Copyright © 2026 Lucas Riechelmann Ramos</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RESTTest: a no-login REST client for Windows</title>
+  <meta name="description" content="RESTTest is a free REST client for Windows 10 and 11. No account, no cloud: collections are JSON files on your machine, and base URLs belong to the collection.">
+  <meta property="og:title" content="RESTTest">
+  <meta property="og:description" content="A no-login REST client for Windows with collection-wide base URLs.">
+  <meta property="og:image" content="https://lucasriechelmann.github.io/RESTTest/screenshot.png">
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap bar">
+      <a class="brand" href="./"><img src="icon.png" alt="" width="28" height="28"> RESTTest</a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/lucasriechelmann/RESTTest">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <h1>A REST client that stays on your machine.</h1>
+      <p class="lead">
+        RESTTest is a free desktop REST client for Windows. No account, no sign-in, no cloud sync:
+        your collections are plain JSON files in your profile. Send requests, check responses,
+        chain a login into the calls after it, and run a whole collection as a test suite.
+      </p>
+      <div class="actions">
+        <a class="button primary" href="https://github.com/lucasriechelmann/RESTTest/releases/latest">Download for Windows</a>
+        <a class="button" href="https://github.com/lucasriechelmann/RESTTest">View the source</a>
+      </div>
+      <p class="fine">Windows 10 or 11, 64-bit. Installer or portable zip. No .NET install needed.</p>
+    </section>
+
+    <section class="wrap shot">
+      <img src="screenshot.png" width="1650" height="1033"
+           alt="RESTTest window: a request tree on the left, a GET request to /headers, and a 200 OK JSON response below.">
+    </section>
+
+    <section class="wrap idea">
+      <h2>Base URLs belong to the collection</h2>
+      <p>
+        In most REST clients every request carries its own host, or a <code>{{baseUrl}}</code>
+        variable you have to remember to use. In RESTTest a collection holds a short list of named
+        base URLs, such as Local, Staging and Production, and every request stores only a method
+        and a path. Pick another base URL in the toolbar and the whole collection points at it.
+        Nothing to edit per request, no template syntax to learn.
+      </p>
+    </section>
+
+    <section id="features" class="wrap">
+      <h2>Features</h2>
+      <div class="grid">
+        <article>
+          <h3>Requests</h3>
+          <p>Method, path, query parameters and headers (each row can be switched off), and a live preview of the final URL. <code>:id</code> path segments get their own parameter table.</p>
+        </article>
+        <article>
+          <h3>Bodies</h3>
+          <p>JSON with highlighting, bracket matching, search, Format and Minify. Also text, XML, URL-encoded forms and multipart with file uploads.</p>
+        </article>
+        <article>
+          <h3>Auth</h3>
+          <p>Bearer token, Basic, and API key as a header or a query parameter.</p>
+        </article>
+        <article>
+          <h3>Responses</h3>
+          <p>Colour-coded status, time and size, pretty preview with a JSONPath filter, raw body and headers. Binary responses save to disk byte for byte.</p>
+        </article>
+        <article>
+          <h3>Tests and runs</h3>
+          <p>Checks on status, response time, headers, JSON paths and body text after every send. Run a folder or a whole collection and get a pass or fail report.</p>
+        </article>
+        <article>
+          <h3>Request chaining</h3>
+          <p>Capture a token or an id from one response and use it in later requests, by name, with no template syntax. Runs pass captured values forward.</p>
+        </article>
+        <article>
+          <h3>Diff and history</h3>
+          <p>Compare a response with the previous one or a pinned baseline. Every send is kept in a searchable history you can save back as a request.</p>
+        </article>
+        <article>
+          <h3>Cookies</h3>
+          <p>A cookie jar keeps and replays cookies between requests, like a browser, and you can inspect or clear it.</p>
+        </article>
+        <article>
+          <h3>Import and cURL</h3>
+          <p>Import Postman v2, Insomnia v4 and OpenAPI 3 or Swagger 2 (JSON). Paste a cURL command as a request, or copy any request as cURL.</p>
+        </article>
+        <article>
+          <h3>Per-request settings</h3>
+          <p>Timeout, follow redirects, and certificate checking per request. Self-signed certificates on localhost just work.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="install" class="wrap">
+      <h2>Install</h2>
+      <div class="two">
+        <div>
+          <h3>Installer</h3>
+          <p>
+            Download <strong>RESTTest-<em>version</em>-setup-x64.exe</strong> from the
+            <a href="https://github.com/lucasriechelmann/RESTTest/releases/latest">latest release</a>
+            and run it. It installs for your user only (no administrator prompt), adds a Start menu
+            entry and can be removed from Settings, Apps. Installing a newer version upgrades in place.
+          </p>
+        </div>
+        <div>
+          <h3>Portable</h3>
+          <p>
+            Prefer no installer? Download <strong>RESTTest-<em>version</em>-portable-x64.zip</strong>,
+            unzip it anywhere and run <code>RESTTest.exe</code>.
+          </p>
+        </div>
+      </div>
+      <div class="note">
+        <p>
+          <strong>Windows SmartScreen may warn you.</strong> The installer is not code-signed, so
+          Windows can show "Windows protected your PC". Choose <em>More info</em>, then
+          <em>Run anyway</em>. Each release lists SHA-256 checksums if you want to verify the file first.
+        </p>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <h2>Your data</h2>
+      <p>
+        Everything is stored under <code>%APPDATA%\RestTest</code>: one readable JSON file per
+        collection, plus history, cookies and settings. Uninstalling leaves these files in place.
+        Tokens, passwords and captured values are saved as plain text, so don't share collection
+        files that hold real secrets.
+      </p>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <p>RESTTest is built with .NET 10 and WPF. <a href="https://github.com/lucasriechelmann/RESTTest/issues">Report a problem</a> · <a href="https://github.com/lucasriechelmann/RESTTest/releases">All releases</a></p>
+  </footer>
+</body>
+</html>

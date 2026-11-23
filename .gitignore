@@ -4,3 +4,5 @@ obj/
 *.user
 *.suo
 TestResults/
+# Release output from build/release.ps1 (installer, zip, checksums).
+artifacts/
