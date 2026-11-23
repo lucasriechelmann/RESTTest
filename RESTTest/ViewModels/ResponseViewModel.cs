@@ -240,6 +240,41 @@ public partial class ResponseViewModel : ObservableObject
     /// <summary>Outcome of the request's assertions for this response. Empty when it has none.</summary>
     public ObservableCollection<AssertionResult> TestResults { get; } = [];
 
+    /// <summary>One line under the status row naming what this response's captures stored, or why one did not.</summary>
+    [ObservableProperty]
+    private string _captureNote = string.Empty;
+
+    [ObservableProperty]
+    private bool _captureNoteIsError;
+
+    /// <summary>
+    /// Shows what the request's captures read from this response. Called after <see cref="Load"/>,
+    /// which clears the note, so a response without captures shows none.
+    /// </summary>
+    public void SetCaptures(IReadOnlyList<CaptureResult> captures)
+    {
+        if (captures.Count == 0)
+        {
+            CaptureNote = string.Empty;
+            CaptureNoteIsError = false;
+            return;
+        }
+
+        var stored = captures.Where(c => c.Succeeded).Select(c => c.Name).ToList();
+        var failed = captures.Where(c => !c.Succeeded).Select(c => c.Message).ToList();
+
+        var parts = new List<string>();
+        if (stored.Count > 0)
+        {
+            parts.Add("Captured " + string.Join(", ", stored) + ".");
+        }
+
+        parts.AddRange(failed.Select(message => "Capture " + message));
+
+        CaptureNote = string.Join(" ", parts);
+        CaptureNoteIsError = failed.Count > 0;
+    }
+
     public bool HasError => !string.IsNullOrEmpty(Error);
 
     public bool HasTests => TestResults.Count > 0;
@@ -262,6 +297,8 @@ public partial class ResponseViewModel : ObservableObject
         Headers.Clear();
         LoadTests(tests);
         SaveNote = string.Empty;
+        CaptureNote = string.Empty;
+        CaptureNoteIsError = false;
 
         if (!result.Completed)
         {
@@ -371,6 +408,8 @@ public partial class ResponseViewModel : ObservableObject
         IsBinary = false;
         BinaryNotice = string.Empty;
         SaveNote = string.Empty;
+        CaptureNote = string.Empty;
+        CaptureNoteIsError = false;
         RaiseSaveChanged();
         _current = null;
         SetBaseline(null);

@@ -32,8 +32,18 @@ Per-request checks against the response: target (status code, response time, hea
 - Persistence: `Models/AssertionModel.cs`, `AssertionTarget.cs`, `AssertionOperator.cs`; stored in `RequestModel.Assertions`.
 - View: Tests tab in `Views/MainWindow.xaml`; labels via `Converters/AssertionLabelConverter.cs`.
 
+## Request chaining (Captures tab, "from capture" fields, path parameters)
+A request's **Captures** tab lists rules: name, source (JSON path, header, status code or the whole body) and the path or header name. After every Send and every Run, each enabled rule reads its value from the response and the collection keeps it under that name (a newer value replaces an older one; a capture that finds nothing keeps the old value and says so). The right side of the tab lists the collection's stored values (value, which request it came from, when) with per-value delete and Clear. They are saved in the collection file, so they survive a restart.
+- **Using a value.** Every value box in the Params, Headers and Form (urlencoded) tables, the path parameter rows, and the Auth tab's bearer token, Basic password and API key value has a link toggle. On, the box becomes a picker of capture names (rules anywhere in the collection plus stored values; a name can be typed) and the stored value is sent whole. The typed text is kept while the toggle is on.
+- **Path parameters.** A path segment written `:name` (e.g. `/users/:id`) gets a row in a "Path parameter" table at the top of the Params tab, created and removed as the path is typed (a value survives retyping the name). The value, typed or from a capture, replaces the segment, escaped. An empty value leaves `:id` in the URL as typed. Only whole segments count, so `host:5000` is untouched.
+- **Missing values.** If a field in use refers to a capture with no stored value (or no name picked), Send does not send: the response pane says which capture is missing and to send the request that captures it first. Nothing is recorded in history. In a run, that request fails with the same message. The URL preview and Copy as cURL use the stored values (cURL warns when one is missing).
+- **Runs.** Values flow forward: a Login early in the run supplies the token for the rest. A capture that reads nothing fails its run row, because later requests would lack the value.
+- The response pane notes "Captured token, userId." after a send, in amber when a capture failed.
+- Owners: `Services/CaptureEvaluator.cs`, `CaptureResult.cs`, `CaptureResolver.cs`, `PathParameters.cs` (pure); `ViewModels/CaptureViewModel.cs`, `CapturedValueViewModel.cs`; `CollectionViewModel` (`CapturedValues`, `CaptureNames`, `StoreCaptures`, `CaptureValueMap`); `RequestViewModel` (`Captures`, `PathParams`, the `...UsesCapture` auth fields); `KeyValueViewModel` (`UsesCapture`, `CaptureName`); wiring in `MainViewModel.SendAsync`/`RunSelected`/`CopyAsCurl`/`RefreshResolvedUrl` and `RunnerViewModel`. Path substitution is in `HttpRequestSender.BuildUrl`. View: Captures tab and path table in `Views/MainWindow.xaml`, `Controls/CaptureValueBox.xaml`.
+- Not built: substitution inside bodies or partial strings, capturing from cookies, automatic "run this first" prerequisites, importing Postman path variables or OpenAPI `{id}` as path parameters (OpenAPI paths still keep `{id}` as text).
+
 ## Collection runner
-Run button (and context menu) runs every request in the selected folder, or the whole collection when a request or nothing is selected, one after another against the active base URL, then shows a report: per-request state (passed, failed, no tests, skipped), status, time, and the failing assertion messages, plus a summary. Run again and Stop buttons; closing the dialog cancels. It does not touch the main response pane and never marks the collection dirty.
+Run button (and context menu) runs every request in the selected folder, or the whole collection when a request or nothing is selected, one after another against the active base URL, then shows a report: per-request state (passed, failed, no tests, skipped), status, time, and the failing assertion and capture messages, plus a summary. Run again and Stop buttons; closing the dialog cancels. It does not touch the main response pane and never edits a request; the only thing it writes back is captured values, which are stored in the collection (see Request chaining).
 - Owner: `ViewModels/RunnerViewModel.cs`, `RunItemViewModel.cs` (each holds a `RequestModel` snapshot taken at start); started from `MainViewModel.RunSelected`.
 - View: `Views/RunnerDialog.xaml`, opened through `IDialogService.ShowRunner`.
 
@@ -104,7 +114,7 @@ Ctrl+F find panel in the JSON editors with amber match highlighting. The panel k
 - Owner: `Controls/JsonEditor.cs`.
 
 ## Not built (do not assume these exist)
-YAML import, Postman environment files, adding a cookie by hand, variables beyond the base URL, binary request bodies (sending a file as the whole body), a GraphQL editor, XML syntax colouring, OAuth and other auth types beyond bearer, Basic and API key.
+YAML import, Postman environment files, adding a cookie by hand, text variables or `{{templates}}` (chaining is captures and whole-field references only), binary request bodies (sending a file as the whole body), a GraphQL editor, XML syntax colouring, OAuth and other auth types beyond bearer, Basic and API key.
 
 <!-- manual:start -->
 <!-- manual:end -->

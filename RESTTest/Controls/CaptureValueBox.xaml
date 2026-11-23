@@ -1,0 +1,43 @@
+<UserControl x:Class="RESTTest.Controls.CaptureValueBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+    <!--
+        A value field that is either typed or taken from a capture. The link toggle switches
+        between the two; the typed text is kept while a capture is used.
+    -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <ui:TextBox Grid.Column="0"
+                    FontFamily="{StaticResource CodeFont}"
+                    PlaceholderText="{Binding PlaceholderText, ElementName=Root}"
+                    Text="{Binding Text, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Visibility="{Binding UsesCapture, ElementName=Root, Converter={StaticResource InverseBoolToVis}}" />
+
+        <!-- Editable: a name can be typed before the request that captures it exists. -->
+        <ComboBox Grid.Column="0"
+                  MinWidth="80"
+                  AutomationProperties.Name="Capture name"
+                  FontFamily="{StaticResource CodeFont}"
+                  IsEditable="True"
+                  ItemsSource="{Binding CaptureNames, ElementName=Root}"
+                  Text="{Binding CaptureName, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                  ToolTip="Sends the value captured under this name (see the Captures tab)"
+                  Visibility="{Binding UsesCapture, ElementName=Root, Converter={StaticResource BoolToVis}}" />
+
+        <ToggleButton Grid.Column="1"
+                      Margin="4,0,0,0"
+                      Padding="6"
+                      VerticalAlignment="Stretch"
+                      AutomationProperties.Name="Use a captured value"
+                      IsChecked="{Binding UsesCapture, ElementName=Root, Mode=TwoWay}"
+                      ToolTip="Use a value captured from another response instead of typing one">
+            <ui:SymbolIcon FontSize="14" Symbol="Link24" />
+        </ToggleButton>
+    </Grid>
+</UserControl>

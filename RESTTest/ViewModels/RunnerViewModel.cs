@@ -8,7 +8,8 @@ namespace RESTTest.ViewModels;
 /// <summary>
 /// Runs a batch of requests one after another against a fixed base URL and reports which
 /// assertions held. Runtime state only: like <see cref="ResponseViewModel"/> it is not an
-/// <see cref="EditableViewModel"/>, so a run can never mark a collection dirty.
+/// <see cref="EditableViewModel"/>, and it never edits requests. The one thing a run writes back
+/// is captured values, through <see cref="CapturesStoredHandler"/>.
 /// </summary>
 public partial class RunnerViewModel : ObservableObject
 {
@@ -42,6 +43,19 @@ public partial class RunnerViewModel : ObservableObject
             Items.Add(item);
         }
     }
+
+    /// <summary>
+    /// The collection's stored capture values, read when each run starts (so "Run again" picks up
+    /// a token captured since). Null means the run starts with none.
+    /// </summary>
+    public Func<IReadOnlyDictionary<string, string>>? CaptureValuesProvider { get; init; }
+
+    /// <summary>
+    /// Called after each request with what its captures read and the request's name, so the
+    /// collection keeps them. A callback rather than a collection reference, like history's
+    /// <see cref="HistoryViewModel.SaveAsRequestHandler"/>: the runner itself stays runtime-only.
+    /// </summary>
+    public Action<IReadOnlyList<CaptureResult>, string>? CapturesStoredHandler { get; init; }
 
     /// <summary>What was run, e.g. "Sample API / Posts".</summary>
     public string Title { get; }
@@ -84,6 +98,11 @@ public partial class RunnerViewModel : ObservableObject
         _cancellation = new CancellationTokenSource();
         var runToken = _cancellation.Token;
 
+        // Values flow forward through the run: a login early on supplies the token for the rest.
+        var captured = new Dictionary<string, string>(
+            CaptureValuesProvider?.Invoke() ?? new Dictionary<string, string>(),
+            StringComparer.OrdinalIgnoreCase);
+
         try
         {
             foreach (var item in Items)
@@ -96,10 +115,17 @@ public partial class RunnerViewModel : ObservableObject
 
                 item.State = RunItemState.Running;
 
+                // Resolved now, not at start: the value may come from a request earlier in this run.
+                var resolved = CaptureResolver.Resolve(item.Request, captured, out var missing);
+
                 // Each request's own timeout is applied by the sender; the run's token still stops it.
-                var result = await _sender
-                    .SendAsync(_baseUrl, item.Request, runToken)
-                    .ConfigureAwait(true);
+                var result = missing.Count > 0
+                    ? HttpExchangeResult.Failure(
+                        _sender.BuildUrl(_baseUrl, resolved),
+                        item.Request.Method,
+                        CaptureResolver.MissingMessage(missing),
+                        0)
+                    : await _sender.SendAsync(_baseUrl, resolved, runToken).ConfigureAwait(true);
 
                 if (runToken.IsCancellationRequested)
                 {
@@ -108,7 +134,18 @@ public partial class RunnerViewModel : ObservableObject
                     continue;
                 }
 
-                item.Apply(result, AssertionEvaluator.EvaluateAll(item.Request.Assertions, result));
+                var captures = CaptureEvaluator.EvaluateAll(item.Request.Captures, result);
+                foreach (var capture in captures.Where(c => c.Succeeded))
+                {
+                    captured[capture.Name] = capture.Value;
+                }
+
+                if (captures.Count > 0)
+                {
+                    CapturesStoredHandler?.Invoke(captures, item.Name);
+                }
+
+                item.Apply(result, AssertionEvaluator.EvaluateAll(item.Request.Assertions, result), captures);
                 CompletedCount++;
             }
         }

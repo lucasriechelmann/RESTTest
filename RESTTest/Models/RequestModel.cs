@@ -33,15 +33,24 @@ public sealed class RequestModel
 
     public string BearerToken { get; set; } = string.Empty;
 
+    /// <summary>Capture name the bearer token comes from instead (see <see cref="KeyValueModel.Capture"/>).</summary>
+    public string? BearerTokenCapture { get; set; }
+
     /// <summary>Credentials for <see cref="AuthKind.Basic"/>; sent as base64 of "user:password".</summary>
     public string BasicUsername { get; set; } = string.Empty;
 
     public string BasicPassword { get; set; } = string.Empty;
 
+    /// <summary>Capture name the Basic password comes from instead.</summary>
+    public string? BasicPasswordCapture { get; set; }
+
     /// <summary>Header or query-parameter name for <see cref="AuthKind.ApiKey"/>, e.g. "X-API-Key" or "api_key".</summary>
     public string ApiKeyName { get; set; } = string.Empty;
 
     public string ApiKeyValue { get; set; } = string.Empty;
+
+    /// <summary>Capture name the API key value comes from instead.</summary>
+    public string? ApiKeyValueCapture { get; set; }
 
     public ApiKeyLocation ApiKeyLocation { get; set; } = ApiKeyLocation.Header;
 
@@ -60,10 +69,19 @@ public sealed class RequestModel
     /// </summary>
     public bool VerifySsl { get; set; } = true;
 
+    /// <summary>
+    /// Values for the <c>:name</c> segments of <see cref="Path"/>, keyed by name (without the colon).
+    /// An empty value leaves the segment as typed. <see cref="KeyValueModel.Enabled"/> is unused.
+    /// </summary>
+    public List<KeyValueModel> PathParams { get; set; } = [];
+
     public List<KeyValueModel> QueryParams { get; set; } = [];
 
     public List<KeyValueModel> Headers { get; set; } = [];
 
     /// <summary>Checks evaluated against the response after every send and every collection run.</summary>
     public List<AssertionModel> Assertions { get; set; } = [];
+
+    /// <summary>Values read from the response after every send and run, and stored in the collection.</summary>
+    public List<CaptureModel> Captures { get; set; } = [];
 }

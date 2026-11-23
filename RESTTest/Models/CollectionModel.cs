@@ -16,4 +16,7 @@ public sealed class CollectionModel
     public string? ActiveEnvironmentId { get; set; }
 
     public List<NodeModel> Items { get; set; } = [];
+
+    /// <summary>Values stored by the captures of this collection's requests, by name.</summary>
+    public List<CapturedValueModel> CapturedValues { get; set; } = [];
 }

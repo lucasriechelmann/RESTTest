@@ -508,19 +508,37 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         try
         {
             var model = request.ToModel();
-            var result = await _sender
-                .SendAsync(collection.ActiveBaseUrl, model, _sendCancellation.Token)
-                .ConfigureAwait(true);
+
+            // Fields set to "from capture" get the collection's stored values. The resolved copy
+            // is what goes on the wire and into history; the editor keeps the reference.
+            var resolved = CaptureResolver.Resolve(model, collection.CaptureValueMap(), out var missing);
+            var notSent = missing.Count > 0;
+
+            var result = notSent
+                ? HttpExchangeResult.Failure(
+                    _sender.BuildUrl(collection.ActiveBaseUrl, resolved),
+                    model.Method,
+                    CaptureResolver.MissingMessage(missing),
+                    0)
+                : await _sender
+                    .SendAsync(collection.ActiveBaseUrl, resolved, _sendCancellation.Token)
+                    .ConfigureAwait(true);
 
             var tests = AssertionEvaluator.EvaluateAll(model.Assertions, result);
+            IReadOnlyList<CaptureResult> captures = notSent ? [] : CaptureEvaluator.EvaluateAll(model.Captures, result);
 
             // Compared with the pinned response if there is one, else with what this request returned last time.
             Response.Load(result, tests, result.Completed ? _baselines.ForNextSend(request) : null);
+            Response.SetCaptures(captures);
             _baselines.Record(request, result);
 
-            if (!_cancelledByUser)
+            collection.StoreCaptures(captures, SelectedNode?.Name ?? string.Empty);
+            RefreshResolvedUrl();
+
+            // A send stopped for a missing capture never left the app, so it is not history.
+            if (!_cancelledByUser && !notSent)
             {
-                History.Record(collection.Name, model, result, tests);
+                History.Record(collection.Name, resolved, result, tests);
             }
         }
         finally
@@ -551,7 +569,8 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
             return;
         }
 
-        var model = request.ToModel();
+        // The command carries the values a send would use, so it works pasted into a terminal.
+        var model = CaptureResolver.Resolve(request.ToModel(), SelectedCollection?.CaptureValueMap() ?? EmptyCaptures, out var missing);
         var url = _sender.BuildUrl(SelectedCollection?.ActiveBaseUrl, model);
 
         if (string.IsNullOrWhiteSpace(url))
@@ -566,7 +585,9 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
             : null;
 
         _dialogs.CopyToClipboard(CurlExporter.Build(url, model, cookies));
-        StatusMessage = "cURL command copied.";
+        StatusMessage = missing.Count == 0
+            ? "cURL command copied."
+            : "cURL command copied, with empty fields. " + CaptureResolver.DescribeMissing(missing);
     }
 
     /// <summary>
@@ -758,7 +779,15 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
 
         var title = folder is null ? collection.Name : $"{collection.Name} / {folder.Name}";
         var items = requests.Select(node => new RunItemViewModel(node.Name, node.Request!.ToModel()));
-        var runner = new RunnerViewModel(_sender, collection.ActiveBaseUrl, title, items);
+        var runner = new RunnerViewModel(_sender, collection.ActiveBaseUrl, title, items)
+        {
+            CaptureValuesProvider = collection.CaptureValueMap,
+            CapturesStoredHandler = (captures, source) =>
+            {
+                collection.StoreCaptures(captures, source);
+                RefreshResolvedUrl();
+            },
+        };
 
         // Start first, then show: the dialog blocks, and the run's continuations are delivered by
         // the dispatcher loop that ShowDialog keeps pumping.
@@ -813,10 +842,16 @@ public partial class MainViewModel : ObservableObject, INodeDropHandler
         }
     }
 
+    private static readonly IReadOnlyDictionary<string, string> EmptyCaptures = new Dictionary<string, string>();
+
     private void RefreshResolvedUrl()
     {
+        // Resolved with the stored captures so the preview shows the URL as it would be sent; a
+        // capture with no value yet leaves its field empty (a ":id" segment stays as typed).
         ResolvedUrl = ActiveRequest is { } request
-            ? _sender.BuildUrl(SelectedCollection?.ActiveBaseUrl, request.ToModel())
+            ? _sender.BuildUrl(
+                SelectedCollection?.ActiveBaseUrl,
+                CaptureResolver.Resolve(request.ToModel(), SelectedCollection?.CaptureValueMap() ?? EmptyCaptures, out _))
             : string.Empty;
     }
 

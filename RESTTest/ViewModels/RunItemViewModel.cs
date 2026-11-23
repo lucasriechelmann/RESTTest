@@ -72,7 +72,11 @@ public partial class RunItemViewModel : ObservableObject
         OnPropertyChanged(nameof(HasFailures));
     }
 
-    public void Apply(HttpExchangeResult result, IReadOnlyList<AssertionResult> tests)
+    /// <summary>
+    /// Fills the row from a finished request. A capture that read nothing fails the row even with
+    /// no tests: the requests after it in the run would be sent without the value they need.
+    /// </summary>
+    public void Apply(HttpExchangeResult result, IReadOnlyList<AssertionResult> tests, IReadOnlyList<CaptureResult>? captures = null)
     {
         ElapsedText = DisplayFormat.Duration(result.ElapsedMilliseconds);
 
@@ -98,9 +102,15 @@ public partial class RunItemViewModel : ObservableObject
                 Failures.Add(failed.Message);
             }
 
-            State = tests.Count == 0
-                ? RunItemState.Unchecked
-                : Failures.Count == 0 ? RunItemState.Passed : RunItemState.Failed;
+            var failedCaptures = (captures ?? []).Where(c => !c.Succeeded).ToList();
+            foreach (var capture in failedCaptures)
+            {
+                Failures.Add("Capture " + capture.Message);
+            }
+
+            State = Failures.Count > 0
+                ? RunItemState.Failed
+                : tests.Count == 0 ? RunItemState.Unchecked : RunItemState.Passed;
         }
 
         OnPropertyChanged(nameof(HasFailures));

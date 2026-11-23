@@ -66,6 +66,26 @@ public partial class RequestViewModel : EditableViewModel
     [ObservableProperty]
     private ApiKeyLocation _apiKeyPlacement = ApiKeyLocation.Header;
 
+    // Each secret can come from a capture instead of being typed (a login's token, say). The typed
+    // text is kept while a capture is used, so switching back loses nothing.
+    [ObservableProperty]
+    private bool _bearerTokenUsesCapture;
+
+    [ObservableProperty]
+    private string _bearerTokenCapture = string.Empty;
+
+    [ObservableProperty]
+    private bool _basicPasswordUsesCapture;
+
+    [ObservableProperty]
+    private string _basicPasswordCapture = string.Empty;
+
+    [ObservableProperty]
+    private bool _apiKeyValueUsesCapture;
+
+    [ObservableProperty]
+    private string _apiKeyValueCapture = string.Empty;
+
     /// <summary>Seconds before a send is abandoned; 0 means no limit. Kept between 0 and an hour.</summary>
     [ObservableProperty]
     private int _timeoutSeconds = RequestModel.DefaultTimeoutSeconds;
@@ -101,6 +121,12 @@ public partial class RequestViewModel : EditableViewModel
         _apiKeyName = model.ApiKeyName ?? string.Empty;
         _apiKeyValue = model.ApiKeyValue ?? string.Empty;
         _apiKeyPlacement = model.ApiKeyLocation;
+        _bearerTokenUsesCapture = model.BearerTokenCapture is not null;
+        _bearerTokenCapture = model.BearerTokenCapture ?? string.Empty;
+        _basicPasswordUsesCapture = model.BasicPasswordCapture is not null;
+        _basicPasswordCapture = model.BasicPasswordCapture ?? string.Empty;
+        _apiKeyValueUsesCapture = model.ApiKeyValueCapture is not null;
+        _apiKeyValueCapture = model.ApiKeyValueCapture ?? string.Empty;
         _timeoutSeconds = Math.Clamp(model.TimeoutSeconds, 0, RequestModel.MaxTimeoutSeconds);
         _followRedirects = model.FollowRedirects;
         _verifySsl = model.VerifySsl;
@@ -130,11 +156,27 @@ public partial class RequestViewModel : EditableViewModel
             Assertions.Add(new AssertionViewModel(assertion));
         }
 
+        foreach (var capture in model.Captures ?? [])
+        {
+            Captures.Add(new CaptureViewModel(capture));
+        }
+
+        foreach (var parameter in model.PathParams ?? [])
+        {
+            PathParams.Add(new KeyValueViewModel(parameter));
+        }
+
+        // Before Wire: a file saved before path parameters existed (or an imported "/users/:id")
+        // gets its rows here, and building them is not an edit.
+        SyncPathParams();
+
         Wire();
     }
 
     private void Wire()
     {
+        TrackChildren(PathParams);
+        TrackChildren(Captures);
         TrackChildren(QueryParams);
         TrackChildren(Headers);
         TrackChildren(FormFields);
@@ -148,7 +190,56 @@ public partial class RequestViewModel : EditableViewModel
             OnPropertyChanged(nameof(EnabledQueryParamCount));
             OnPropertyChanged(nameof(EnabledHeaderCount));
             OnPropertyChanged(nameof(EnabledAssertionCount));
+            OnPropertyChanged(nameof(EnabledCaptureCount));
         };
+    }
+
+    /// <summary>
+    /// Path parameter rows removed because their segment left the path, kept by name for this
+    /// session: typing ":i", ":id" would otherwise lose a value typed for "id" on the way.
+    /// </summary>
+    private readonly Dictionary<string, KeyValueViewModel> _parkedPathParams = new(StringComparer.Ordinal);
+
+    /// <summary>One row per <c>:name</c> segment of the path, in path order; values follow the name.</summary>
+    public ObservableCollection<KeyValueViewModel> PathParams { get; } = [];
+
+    public bool HasPathParams => PathParams.Count > 0;
+
+    public ObservableCollection<CaptureViewModel> Captures { get; } = [];
+
+    public int EnabledCaptureCount => Captures.Count(c => c.Enabled && !string.IsNullOrWhiteSpace(c.Name));
+
+    /// <summary>Makes <see cref="PathParams"/> match the <c>:name</c> segments of <see cref="Path"/>.</summary>
+    private void SyncPathParams()
+    {
+        var names = PathParameters.NamesIn(Path);
+        if (names.SequenceEqual(PathParams.Select(p => p.Key), StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        var existing = PathParams.ToDictionary(p => p.Key, StringComparer.Ordinal);
+        foreach (var row in PathParams)
+        {
+            if (!names.Contains(row.Key, StringComparer.Ordinal))
+            {
+                _parkedPathParams[row.Key] = row;
+            }
+        }
+
+        var wanted = names
+            .Select(name => existing.GetValueOrDefault(name)
+                            ?? (_parkedPathParams.Remove(name, out var parked) ? parked : new KeyValueViewModel { Key = name }))
+            .ToList();
+
+        // Rebuilt in place so the same ObservableCollection (and its Dirty subscription) stays bound.
+        PathParams.Clear();
+        foreach (var row in wanted)
+        {
+            PathParams.Add(row);
+        }
+
+        OnPropertyChanged(nameof(HasPathParams));
     }
 
     public ObservableCollection<KeyValueViewModel> QueryParams { get; } = [];
@@ -240,6 +331,11 @@ public partial class RequestViewModel : EditableViewModel
         ApiKeyName = ApiKeyName,
         ApiKeyValue = ApiKeyValue,
         ApiKeyLocation = ApiKeyPlacement,
+        BearerTokenCapture = BearerTokenUsesCapture ? BearerTokenCapture.Trim() : null,
+        BasicPasswordCapture = BasicPasswordUsesCapture ? BasicPasswordCapture.Trim() : null,
+        ApiKeyValueCapture = ApiKeyValueUsesCapture ? ApiKeyValueCapture.Trim() : null,
+        PathParams = [.. PathParams.Select(p => p.ToModel())],
+        Captures = [.. Captures.Select(c => c.ToModel())],
         TimeoutSeconds = TimeoutSeconds,
         FollowRedirects = FollowRedirects,
         VerifySsl = VerifySsl,
@@ -297,6 +393,18 @@ public partial class RequestViewModel : EditableViewModel
     }
 
     [RelayCommand]
+    private void AddCapture() => Captures.Add(new CaptureViewModel());
+
+    [RelayCommand]
+    private void RemoveCapture(CaptureViewModel? capture)
+    {
+        if (capture is not null)
+        {
+            Captures.Remove(capture);
+        }
+    }
+
+    [RelayCommand]
     private void AddAssertion() => Assertions.Add(new AssertionViewModel());
 
     [RelayCommand]
@@ -350,6 +458,8 @@ public partial class RequestViewModel : EditableViewModel
             or nameof(EnabledQueryParamCount)
             or nameof(EnabledHeaderCount)
             or nameof(EnabledAssertionCount)
+            or nameof(EnabledCaptureCount)
+            or nameof(HasPathParams)
             or nameof(IsJsonBody)
             or nameof(IsPlainTextBody)
             or nameof(IsFormBody)
@@ -364,6 +474,8 @@ public partial class RequestViewModel : EditableViewModel
             or nameof(TimeoutHint);
 
     partial void OnMethodChanged(string value) => OnPropertyChanged(nameof(SupportsBody));
+
+    partial void OnPathChanged(string value) => SyncPathParams();
 
     partial void OnBodyModeChanged(BodyKind value)
     {

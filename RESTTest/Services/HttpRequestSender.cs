@@ -105,7 +105,8 @@ public sealed class HttpRequestSender : IHttpRequestSender
 
     public string BuildUrl(string? baseUrl, RequestModel request)
     {
-        var path = (request.Path ?? string.Empty).Trim();
+        // ":id" segments are filled first, so the preview, history and cURL all show the real path.
+        var path = PathParameters.Substitute((request.Path ?? string.Empty).Trim(), request.PathParams);
 
         // A fully qualified path wins, so a one-off request can reach outside the collection.
         string combined;

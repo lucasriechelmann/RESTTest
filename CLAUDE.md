@@ -2,6 +2,8 @@
 
 A Windows 11 desktop REST client (WPF, .NET 10) built as a no-login alternative to Postman and Insomnia. Its defining design choice: **base URLs belong to the collection, not to each request.** A collection holds a list of named base URLs, one is active, and every request stores only a method and a relative path. Switching the active URL re-targets every request at once. There is deliberately no per-request host field and no `{{variable}}` substitution layer; do not add either unless asked.
 
+Request chaining exists **without** text templating (decided 2026-11-23, "option B"): a request's **captures** read a value from its response (JSON path, header, status, body) and store it in the collection by name; a value field (query, header, form and path rows, bearer token, Basic password, API key value) can be switched to "from capture" with the link button, which takes the stored value whole at send time. Path segments written `:name` get a Path parameters table. Resolution happens in `CaptureResolver` before the sender, preview, history and cURL; the sender never sees a capture reference. Do not grow this into string substitution inside bodies or paths.
+
 ## Projects
 
 | Project | Purpose |

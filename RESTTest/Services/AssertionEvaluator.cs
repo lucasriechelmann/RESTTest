@@ -72,11 +72,19 @@ public static class AssertionEvaluator
         _ => assertion.Target.ToString(),
     };
 
-    private static bool TryGetActual(AssertionModel assertion, HttpExchangeResult response, out string actual)
+    private static bool TryGetActual(AssertionModel assertion, HttpExchangeResult response, out string actual) =>
+        TryRead(assertion.Target, assertion.Selector, response, out actual);
+
+    /// <summary>
+    /// Reads one part of a response as text. Shared with <see cref="CaptureEvaluator"/>, so a test
+    /// and a capture pointed at the same header or JSON path always see the same value.
+    /// </summary>
+    public static bool TryRead(AssertionTarget target, string? selector, HttpExchangeResult response, out string actual)
     {
         actual = string.Empty;
+        selector ??= string.Empty;
 
-        switch (assertion.Target)
+        switch (target)
         {
             case AssertionTarget.StatusCode:
                 actual = response.StatusCode.ToString(CultureInfo.InvariantCulture);
@@ -90,7 +98,7 @@ public static class AssertionEvaluator
                 // Header names are case-insensitive on the wire. A header sent twice is joined,
                 // which is how HTTP itself defines the combined value.
                 var values = response.ResponseHeaders
-                    .Where(h => string.Equals(h.Key, assertion.Selector.Trim(), StringComparison.OrdinalIgnoreCase))
+                    .Where(h => string.Equals(h.Key, selector.Trim(), StringComparison.OrdinalIgnoreCase))
                     .Select(h => h.Value)
                     .ToList();
                 actual = string.Join(", ", values);
@@ -101,7 +109,7 @@ public static class AssertionEvaluator
                 return !string.IsNullOrEmpty(response.Body);
 
             case AssertionTarget.JsonPath:
-                return JsonPathLite.TryGetValue(response.Body, assertion.Selector, out actual);
+                return JsonPathLite.TryGetValue(response.Body, selector, out actual);
 
             default:
                 return false;

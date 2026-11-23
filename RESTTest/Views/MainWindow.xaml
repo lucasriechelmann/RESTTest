@@ -559,11 +559,13 @@
                                                                         PlaceholderText="name"
                                                                         Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                                                            <ui:TextBox Grid.Column="2"
-                                                                        Margin="8,0,0,0"
-                                                                        FontFamily="{StaticResource CodeFont}"
-                                                                        PlaceholderText="value"
-                                                                        Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <ctrl:CaptureValueBox Grid.Column="2"
+                                                                                      Margin="8,0,0,0"
+                                                                                      CaptureNames="{Binding DataContext.SelectedCollection.CaptureNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                      CaptureName="{Binding CaptureName, Mode=TwoWay}"
+                                                                                      PlaceholderText="value"
+                                                                                      Text="{Binding Value, Mode=TwoWay}"
+                                                                                      UsesCapture="{Binding UsesCapture, Mode=TwoWay}" />
 
                                                             <ui:Button Grid.Column="3"
                                                                        Margin="8,0,0,0"
@@ -713,9 +715,11 @@
                                 <StackPanel Margin="0,16,0,0"
                                             Visibility="{Binding IsBearerAuth, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Style="{StaticResource SectionLabelStyle}" Text="Token" />
-                                    <ui:TextBox FontFamily="{StaticResource CodeFont}"
-                                                PlaceholderText="eyJhbGciOi..."
-                                                Text="{Binding BearerToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ctrl:CaptureValueBox MinWidth="260" CaptureNames="{Binding DataContext.SelectedCollection.CaptureNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CaptureName="{Binding BearerTokenCapture, Mode=TwoWay}"
+                                                          PlaceholderText="eyJhbGciOi..."
+                                                          Text="{Binding BearerToken, Mode=TwoWay}"
+                                                          UsesCapture="{Binding BearerTokenUsesCapture, Mode=TwoWay}" />
                                     <TextBlock Margin="0,8,0,0"
                                                FontSize="12"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -730,7 +734,10 @@
                                     <TextBlock Style="{StaticResource SectionLabelStyle}"
                                                Margin="0,12,0,0"
                                                Text="Password" />
-                                    <ui:TextBox Text="{Binding BasicPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ctrl:CaptureValueBox MinWidth="260" CaptureNames="{Binding DataContext.SelectedCollection.CaptureNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CaptureName="{Binding BasicPasswordCapture, Mode=TwoWay}"
+                                                          Text="{Binding BasicPassword, Mode=TwoWay}"
+                                                          UsesCapture="{Binding BasicPasswordUsesCapture, Mode=TwoWay}" />
 
                                     <TextBlock Margin="0,8,0,0"
                                                FontSize="12"
@@ -763,8 +770,10 @@
                                     <TextBlock Style="{StaticResource SectionLabelStyle}"
                                                Margin="0,12,0,0"
                                                Text="Value" />
-                                    <ui:TextBox FontFamily="{StaticResource CodeFont}"
-                                                Text="{Binding ApiKeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ctrl:CaptureValueBox MinWidth="260" CaptureNames="{Binding DataContext.SelectedCollection.CaptureNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CaptureName="{Binding ApiKeyValueCapture, Mode=TwoWay}"
+                                                          Text="{Binding ApiKeyValue, Mode=TwoWay}"
+                                                          UsesCapture="{Binding ApiKeyValueUsesCapture, Mode=TwoWay}" />
 
                                     <TextBlock Margin="0,8,0,0"
                                                FontSize="12"
@@ -787,11 +796,61 @@
                             <Grid Margin="0,10,0,0">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                <!--
+                                    One row per ":name" segment of the path, kept in step with the path box
+                                    by the ViewModel. Only shown when the path has any. Same columns as the
+                                    query table below so the two line up.
+                                -->
+                                <StackPanel Grid.Row="0"
+                                            Margin="0,0,10,10"
+                                            Visibility="{Binding HasPathParams, Converter={StaticResource BoolToVis}}">
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="44" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="1.4*" />
+                                            <ColumnDefinition Width="48" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource SectionLabelStyle}" Text="Path parameter" />
+                                        <TextBlock Grid.Column="2" Margin="8,0,0,6" Style="{StaticResource SectionLabelStyle}" Text="Value" />
+                                    </Grid>
+
+                                    <ItemsControl ItemsSource="{Binding PathParams}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="44" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="1.4*" />
+                                                        <ColumnDefinition Width="48" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="1"
+                                                               VerticalAlignment="Center"
+                                                               FontFamily="{StaticResource CodeFont}"
+                                                               Text="{Binding Key, StringFormat=':{0}'}"
+                                                               TextTrimming="CharacterEllipsis" />
+
+                                                    <ctrl:CaptureValueBox Grid.Column="2"
+                                                                          Margin="8,0,0,0"
+                                                                          CaptureNames="{Binding DataContext.SelectedCollection.CaptureNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          CaptureName="{Binding CaptureName, Mode=TwoWay}"
+                                                                          PlaceholderText="empty: left as typed"
+                                                                          Text="{Binding Value, Mode=TwoWay}"
+                                                                          UsesCapture="{Binding UsesCapture, Mode=TwoWay}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+
+                                <Grid Grid.Row="1" Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="44" />
                                         <ColumnDefinition Width="*" />
@@ -804,7 +863,7 @@
                                     <TextBlock Grid.Column="3" Width="40" Text="" />
                                 </Grid>
 
-                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                                     <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding QueryParams}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
@@ -826,11 +885,13 @@
                                                                 PlaceholderText="key"
                                                                 Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                                                    <ui:TextBox Grid.Column="2"
-                                                                Margin="8,0,0,0"
-                                                                FontFamily="{StaticResource CodeFont}"
-                                                                PlaceholderText="value"
-                                                                Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <ctrl:CaptureValueBox Grid.Column="2"
+                                                                              Margin="8,0,0,0"
+                                                                              CaptureNames="{Binding DataContext.SelectedCollection.CaptureNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                              CaptureName="{Binding CaptureName, Mode=TwoWay}"
+                                                                              PlaceholderText="value"
+                                                                              Text="{Binding Value, Mode=TwoWay}"
+                                                                              UsesCapture="{Binding UsesCapture, Mode=TwoWay}" />
 
                                                     <ui:Button Grid.Column="3"
                                                                Margin="8,0,0,0"
@@ -847,7 +908,7 @@
                                     </ItemsControl>
                                 </ScrollViewer>
 
-                                <ui:Button Grid.Row="2"
+                                <ui:Button Grid.Row="3"
                                            Margin="0,8,0,0"
                                            HorizontalAlignment="Left"
                                            Command="{Binding AddQueryParamCommand}"
@@ -909,11 +970,13 @@
                                                                 PlaceholderText="X-Example"
                                                                 Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                                                    <ui:TextBox Grid.Column="2"
-                                                                Margin="8,0,0,0"
-                                                                FontFamily="{StaticResource CodeFont}"
-                                                                PlaceholderText="value"
-                                                                Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <ctrl:CaptureValueBox Grid.Column="2"
+                                                                              Margin="8,0,0,0"
+                                                                              CaptureNames="{Binding DataContext.SelectedCollection.CaptureNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                              CaptureName="{Binding CaptureName, Mode=TwoWay}"
+                                                                              PlaceholderText="value"
+                                                                              Text="{Binding Value, Mode=TwoWay}"
+                                                                              UsesCapture="{Binding UsesCapture, Mode=TwoWay}" />
 
                                                     <ui:Button Grid.Column="3"
                                                                Margin="8,0,0,0"
@@ -1049,6 +1112,176 @@
                         <TabItem>
                             <TabItem.Header>
                                 <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Captures" />
+                                    <TextBlock Opacity="0.7" Text="{Binding EnabledCaptureCount, StringFormat=' ({0})'}" />
+                                </StackPanel>
+                            </TabItem.Header>
+
+                            <!-- Left: this request's capture rules. Right: the values stored in the collection. -->
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MinWidth="380" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="0.6*" MinWidth="220" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Grid.Column="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0"
+                                               Margin="0,0,0,8"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="After every Send and Run, each value is read from the response and kept in the collection. Other requests use it with the link button next to a value."
+                                               TextWrapping="Wrap" />
+
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding Captures}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,6">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="44" />
+                                                            <ColumnDefinition Width="0.8*" />
+                                                            <ColumnDefinition Width="130" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <CheckBox Grid.Column="0"
+                                                                  VerticalAlignment="Center"
+                                                                  IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                                  ToolTip="Capture this value" />
+
+                                                        <ui:TextBox Grid.Column="1"
+                                                                    FontFamily="{StaticResource CodeFont}"
+                                                                    PlaceholderText="name"
+                                                                    Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    ToolTip="The name other requests pick" />
+
+                                                        <ComboBox Grid.Column="2"
+                                                                  Margin="8,0,0,0"
+                                                                  ItemsSource="{Binding SourceOptions}"
+                                                                  SelectedItem="{Binding Source, Mode=TwoWay}">
+                                                            <ComboBox.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <TextBlock Text="{Binding Converter={StaticResource AssertionLabel}}" />
+                                                                </DataTemplate>
+                                                            </ComboBox.ItemTemplate>
+                                                        </ComboBox>
+
+                                                        <ui:TextBox Grid.Column="3"
+                                                                    Margin="8,0,0,0"
+                                                                    FontFamily="{StaticResource CodeFont}"
+                                                                    PlaceholderText="{Binding SelectorPlaceholder}"
+                                                                    Text="{Binding Selector, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    Visibility="{Binding ShowsSelector, Converter={StaticResource BoolToVis}}" />
+
+                                                        <ui:Button Grid.Column="4"
+                                                                   Margin="8,0,0,0"
+                                                                   Padding="6"
+                                                                   Command="{Binding DataContext.RemoveCaptureCommand,
+                                                                                      RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                   CommandParameter="{Binding}"
+                                                                   ToolTip="Remove">
+                                                            <ui:SymbolIcon FontSize="14" Symbol="Delete24" />
+                                                        </ui:Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <ui:Button Grid.Row="2"
+                                               Margin="0,8,0,0"
+                                               HorizontalAlignment="Left"
+                                               Command="{Binding AddCaptureCommand}"
+                                               Content="Add capture">
+                                        <ui:Button.Icon>
+                                            <ui:SymbolIcon Symbol="Add24" />
+                                        </ui:Button.Icon>
+                                    </ui:Button>
+                                </Grid>
+
+                                <!-- The collection's stored values: the tab's DataContext is the request, so reach the collection through the window. -->
+                                <Grid Grid.Column="2"
+                                      DataContext="{Binding DataContext.SelectedCollection, RelativeSource={RelativeSource AncestorType=Window}}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="True">
+                                        <ui:Button DockPanel.Dock="Right"
+                                                   Padding="8,2"
+                                                   Command="{Binding ClearCapturedValuesCommand}"
+                                                   Content="Clear"
+                                                   FontSize="12"
+                                                   ToolTip="Forget every captured value in this collection"
+                                                   Visibility="{Binding HasCapturedValues, Converter={StaticResource BoolToVis}}" />
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Style="{StaticResource SectionLabelStyle}"
+                                                   Margin="0"
+                                                   Text="Captured values in this collection"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+
+                                    <TextBlock Grid.Row="1"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="Nothing captured yet. Send a request that has captures."
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding HasCapturedValues, Converter={StaticResource InverseBoolToVis}}" />
+
+                                    <ScrollViewer Grid.Row="1"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  Visibility="{Binding HasCapturedValues, Converter={StaticResource BoolToVis}}">
+                                        <ItemsControl Margin="0,0,10,0" ItemsSource="{Binding CapturedValues}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" ToolTip="{Binding Value}">
+                                                            <TextBlock FontFamily="{StaticResource CodeFont}" TextTrimming="CharacterEllipsis">
+                                                                <Run FontWeight="SemiBold" Text="{Binding Name, Mode=OneWay}" />
+                                                                <Run Text="=" />
+                                                                <Run Text="{Binding ValuePreview, Mode=OneWay}" />
+                                                            </TextBlock>
+                                                            <TextBlock FontSize="11"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="{Binding Detail}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                        <ui:Button Grid.Column="1"
+                                                                   Margin="6,0,0,0"
+                                                                   Padding="6"
+                                                                   VerticalAlignment="Center"
+                                                                   AutomationProperties.Name="Forget this value"
+                                                                   Command="{Binding DataContext.RemoveCapturedValueCommand,
+                                                                                      RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                   CommandParameter="{Binding}"
+                                                                   ToolTip="Forget this value">
+                                                            <ui:SymbolIcon FontSize="14" Symbol="Delete24" />
+                                                        </ui:Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem>
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Settings" />
                                     <!-- A dot says something here differs from the defaults. -->
                                     <TextBlock Margin="4,0,0,0"
@@ -1172,6 +1405,26 @@
                                             <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SaveNote}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <!-- What this response's captures stored; amber when one read nothing. -->
+                                    <TextBlock Margin="12,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding CaptureNote}"
+                                               TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CaptureNoteIsError}" Value="True">
+                                                        <Setter Property="Foreground" Value="#D08A1E" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding CaptureNote}" Value="">
                                                         <Setter Property="Visibility" Value="Collapsed" />
                                                     </DataTrigger>
                                                 </Style.Triggers>

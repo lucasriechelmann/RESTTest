@@ -40,7 +40,114 @@ public partial class CollectionViewModel : EditableViewModel
         TrackChildren(Environments);
         TrackChildren(Items);
         Environments.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasEnvironments));
+
+        // Stored values are immutable rows, so a change to the list is the whole edit.
+        CapturedValues.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasCapturedValues));
+            RaiseDirty();
+        };
+
+        // A capture renamed or added anywhere in the tree changes what the "from capture" pickers offer.
+        Dirty += (_, _) => RefreshCaptureNames();
+        RefreshCaptureNames();
     }
+
+    /// <summary>Values the captures of this collection's requests stored, by name. Persisted.</summary>
+    public ObservableCollection<CapturedValueViewModel> CapturedValues { get; } = [];
+
+    public bool HasCapturedValues => CapturedValues.Count > 0;
+
+    /// <summary>
+    /// Every name a "from capture" field can pick: the names of the capture rules in this
+    /// collection and of the values already stored, sorted. Replaced only when the set changes, so
+    /// an editable picker being typed in does not have its list swapped under it on every key.
+    /// </summary>
+    [ObservableProperty]
+    private IReadOnlyList<string> _captureNames = [];
+
+    /// <summary>The stored values as a lookup for <see cref="Services.CaptureResolver"/>; names ignore case.</summary>
+    public IReadOnlyDictionary<string, string> CaptureValueMap()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var value in CapturedValues)
+        {
+            map[value.Name] = value.Value;
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Keeps the values that were captured, replacing any older value of the same name. A failed
+    /// capture is not stored, so a bad response never wipes a good token.
+    /// </summary>
+    public void StoreCaptures(IEnumerable<Services.CaptureResult> results, string sourceRequest)
+    {
+        foreach (var result in results.Where(r => r.Succeeded))
+        {
+            var row = new CapturedValueViewModel(new CapturedValueModel
+            {
+                Name = result.Name,
+                Value = result.Value,
+                Source = sourceRequest,
+                CapturedAt = DateTimeOffset.Now,
+            });
+
+            var index = IndexOfCapturedValue(result.Name);
+            if (index < 0)
+            {
+                CapturedValues.Add(row);
+            }
+            else if (CapturedValues[index].Value != result.Value || CapturedValues[index].Source != sourceRequest)
+            {
+                CapturedValues[index] = row;
+            }
+        }
+    }
+
+    private int IndexOfCapturedValue(string name)
+    {
+        for (var i = 0; i < CapturedValues.Count; i++)
+        {
+            if (string.Equals(CapturedValues[i].Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private void RefreshCaptureNames()
+    {
+        var names = AllNodes()
+            .Where(node => node.Request is not null)
+            .SelectMany(node => node.Request!.Captures)
+            .Select(capture => capture.Name.Trim())
+            .Concat(CapturedValues.Select(value => value.Name))
+            .Where(name => name.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (!names.SequenceEqual(CaptureNames, StringComparer.Ordinal))
+        {
+            CaptureNames = names;
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveCapturedValue(CapturedValueViewModel? value)
+    {
+        if (value is not null)
+        {
+            CapturedValues.Remove(value);
+        }
+    }
+
+    [RelayCommand]
+    private void ClearCapturedValues() => CapturedValues.Clear();
 
     public string Id { get; }
 
@@ -71,6 +178,14 @@ public partial class CollectionViewModel : EditableViewModel
             collection.Items.Add(NodeViewModel.FromModel(item));
         }
 
+        foreach (var value in model.CapturedValues ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(value.Name))
+            {
+                collection.CapturedValues.Add(new CapturedValueViewModel(value));
+            }
+        }
+
         collection.ActiveEnvironment =
             collection.Environments.FirstOrDefault(e => e.Id == model.ActiveEnvironmentId)
             ?? collection.Environments.FirstOrDefault();
@@ -87,6 +202,7 @@ public partial class CollectionViewModel : EditableViewModel
         ActiveEnvironmentId = ActiveEnvironment?.Id,
         Environments = [.. Environments.Select(e => e.ToModel())],
         Items = [.. Items.Select(item => item.ToModel())],
+        CapturedValues = [.. CapturedValues.Select(value => value.ToModel())],
     };
 
     /// <summary>Every node in the tree, depth first.</summary>
@@ -215,7 +331,8 @@ public partial class CollectionViewModel : EditableViewModel
         siblings.Insert(placement == DropPlacement.After ? index + 1 : index, source);
     }
 
-    protected override bool IsTransient(string? propertyName) => false;
+    protected override bool IsTransient(string? propertyName) =>
+        propertyName is nameof(CaptureNames) or nameof(HasCapturedValues);
 
     partial void OnActiveEnvironmentChanged(EnvironmentViewModel? value)
     {
